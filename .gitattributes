@@ -5,3 +5,8 @@
 *.html diff=html
 *.md diff=markdown
 *.php diff=php
+
+# Só do repositório do kit (monorepo): fica fora do pacote publicado — e,
+# portanto, do projeto criado (o `composer archive` e o ZIP do GitHub
+# respeitam o export-ignore).
+/tests/Feature/Localization/SharedTextsWithLivewireTest.php export-ignore

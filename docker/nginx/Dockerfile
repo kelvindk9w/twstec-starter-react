@@ -1,24 +1,17 @@
 # syntax=docker/dockerfile:1
 # =============================================================================
-# Dockerfile Nginx — TWS Laravel Starter Kit, starter React (o mesmo do
-# starter Livewire: o nginx só recebe o public/ publicado pelo app)
+# Dockerfile Nginx — PRODUÇÃO (o nginx só recebe o public/ publicado pelo app)
 #
-# Targets:
-#   dev   → HTTP simples na porta 80 (o compose de dev da raiz do monorepo
-#           monta o docker/nginx/dev.conf numa imagem nginx pronta)
+# Target:
 #   prod  → HTTP 80 (redirect) + HTTPS 443 com certificado autoassinado
 #           gerado no build. Em produção real, monte certificados válidos
 #           em /etc/nginx/certs (server.crt / server.key) via volume.
+#
+# O DESENVOLVIMENTO não usa esta imagem: o compose.yaml sobe a imagem oficial
+# do nginx com docker/dev/nginx.conf.template.
 # =============================================================================
 
 FROM nginx:stable-alpine3.24 AS base
-
-# -----------------------------------------------------------------------------
-# DESENVOLVIMENTO
-# -----------------------------------------------------------------------------
-FROM base AS dev
-
-COPY docker/nginx/dev.conf /etc/nginx/conf.d/default.conf
 
 # -----------------------------------------------------------------------------
 # PRODUÇÃO: TLS autoassinado embutido para a stack subir autocontida.

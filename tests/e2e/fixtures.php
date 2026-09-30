@@ -5,7 +5,7 @@ declare(strict_types=1);
 // =============================================================================
 // Pessoas FIXAS do E2E do starter React, no banco de DESENVOLVIMENTO.
 //
-//   docker compose exec -T react-app php artisan tinker --execute="require 'tests/e2e/fixtures.php';"
+//   docker compose exec -T app php artisan tinker --execute="require 'tests/e2e/fixtures.php';"
 //
 // O React não tem a demonstração (twstec/kit-demo), então não há conta demo
 // nem login pré-preenchido: o E2E usa duas pessoas próprias, criadas (ou
@@ -61,6 +61,10 @@ $fixture = function (string $email, string $name, string $password, bool $transa
 $fixture('e2e@example.com', 'Pessoa E2E', (string) (getenv('E2E_USER_PASSWORD') ?: 'E2eSenhaForte123'), true);
 $fixture('admin-e2e@example.com', 'Admin E2E', (string) (getenv('E2E_ADMIN_PASSWORD') ?: 'E2eAdminSenha123'), false);
 
-Artisan::call('user:make-admin', ['email' => 'admin-e2e@example.com']);
+// O /admin é opcional (twstec/kit-admin): sem ele, o admin do E2E é só uma
+// pessoa comum, sem uso.
+if (array_key_exists('user:make-admin', Artisan::all())) {
+    Artisan::call('user:make-admin', ['email' => 'admin-e2e@example.com']);
+}
 
 echo 'Pessoas fixas do E2E prontas: e2e@example.com e admin-e2e@example.com'.PHP_EOL;

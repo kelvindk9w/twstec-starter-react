@@ -23,14 +23,24 @@ const admin =
 //   não permite fonte externa — a Instrument Sans vem do @fontsource
 //   (resources/css/app.css);
 // - a entrada do tema do /admin, quando ele está instalado.
-// Docker de desenvolvimento de um projeto criado (compose.yaml, serviço
-// `vite`): o Vite roda num container e o navegador o acha pelo endereço do
-// projeto (http://<nome>.localhost:<porta do Vite>, VITE_DEV_ORIGIN), não
-// pelo do container. Fora dele (npm run dev na máquina, o monorepo), nada
-// muda. VITE_DEV_POLLING=true: pastas do Windows montadas no Docker não
-// avisam quando um arquivo muda.
+// Docker de desenvolvimento (compose.yaml, serviço `vite`): o Vite roda num
+// container e o navegador o acha pelo endereço do projeto
+// (http://<nome>.localhost:<porta do Vite>, VITE_DEV_ORIGIN), não pelo do
+// container. A PÁGINA vem de outra origem — o site, servido pelo nginx
+// (http://<nome>.localhost:<porta do site>, VITE_DEV_APP_URL) —, e o navegador
+// só executa os scripts do Vite se ele liberar essa origem no CORS. Com
+// `server.origin` definido, o laravel-vite-plugin libera só a origem do
+// próprio Vite (e a página fica em branco); por isso o CORS é declarado aqui:
+// SÓ a origem do site, nenhuma outra (outro projeto `*.localhost` ou um site
+// qualquer continuam sem o cabeçalho de liberação). Sem as variáveis (`npm run
+// dev` na máquina), nada disso vale e o padrão do plugin continua.
+// VITE_DEV_POLLING=true: pastas do Windows montadas no Docker não avisam
+// quando um arquivo muda.
 const devOrigin = process.env.VITE_DEV_ORIGIN
     ? new URL(process.env.VITE_DEV_ORIGIN)
+    : null;
+const devAppOrigin = process.env.VITE_DEV_APP_URL
+    ? new URL(process.env.VITE_DEV_APP_URL).origin
     : null;
 const devServer = devOrigin
     ? {
@@ -39,6 +49,8 @@ const devServer = devOrigin
           strictPort: true,
           origin: devOrigin.origin,
           hmr: { host: devOrigin.hostname, clientPort: Number(devOrigin.port) },
+          // Só a origem do site; sem ela, nenhuma (nunca a do próprio Vite).
+          cors: { origin: devAppOrigin ? [devAppOrigin] : [] },
       }
     : {};
 const polling = process.env.VITE_DEV_POLLING === 'true';
@@ -98,6 +110,8 @@ export default defineConfig({
         htmlWhitespaceSensitivity: 'css',
         ignorePatterns: [
             '.github/**',
+            // O CI do projeto criado (vai para .github/workflows/ na criação).
+            'docker/dev/ci.yml',
             // A documentação segue o estilo do resto do repositório (docs/).
             '**/*.md',
             'composer.json',

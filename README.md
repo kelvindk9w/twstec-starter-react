@@ -96,7 +96,7 @@ Livewire em `localhost:8180` e o React em `localhost:8181`, o cookie
 `XSRF-TOKEN` (nome fixo do Laravel, lido pelo front) era um só para os dois, e
 o primeiro envio depois de trocar de aba caía no "sessão expirou" (419). Em
 `127.0.0.1`, os cookies do React ficam separados. O `APP_URL` do
-`.env.example` já é esse, e o `docker/nginx/dev.conf` leva quem abrir
+`.env.example` já é esse, e o `docker/nginx/react-dev.conf` (na raiz do monorepo) leva quem abrir
 `localhost:8181` ao mesmo caminho em `127.0.0.1:8181` (308: método e corpo
 mantidos). Só no dev: a produção atende pelo domínio da `APP_URL`.
 

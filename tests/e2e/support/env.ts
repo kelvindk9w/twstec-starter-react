@@ -1,11 +1,14 @@
+import { mailpitBaseUrl } from './project-env';
+
 // Credenciais e endereços do E2E (sobreponíveis pelo ambiente). As pessoas
-// fixas são criadas por tests/e2e/fixtures.php.
+// fixas são criadas por tests/e2e/fixtures.php. O Mailpit é o do PRÓPRIO
+// projeto (support/project-env.ts), nunca o de outro ambiente da máquina.
 
 export const userEmail = process.env.E2E_USER_EMAIL ?? 'e2e@example.com';
 export const userPassword = process.env.E2E_USER_PASSWORD ?? 'E2eSenhaForte123';
 export const adminEmail = process.env.E2E_ADMIN_EMAIL ?? 'admin-e2e@example.com';
 export const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'E2eAdminSenha123';
-export const mailpitUrl = process.env.E2E_MAILPIT_URL ?? 'http://localhost:18025';
+export const mailpitUrl = mailpitBaseUrl;
 
 // Sessões gravadas pelo global-setup.
 export const userState = 'tests/e2e/.auth/e2e.json';

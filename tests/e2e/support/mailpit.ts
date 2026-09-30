@@ -3,7 +3,7 @@ import { mailpitUrl } from './env';
 
 // =============================================================================
 // A caixa do Mailpit, lida pela API dele. Os e-mails são entregues pelo
-// worker `react-queue`; a leitura espera por eles (poll), nunca por tempo
+// worker da fila (serviço `queue`); a leitura espera por eles (poll), nunca por tempo
 // fixo. A escolha da mensagem é pelo DESTINATÁRIO e pelo que ainda não foi
 // visto (`seen`) — não pelo assunto, que muda com o idioma.
 // =============================================================================

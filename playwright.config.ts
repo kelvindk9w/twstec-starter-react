@@ -1,29 +1,30 @@
 import { defineConfig, devices } from '@playwright/test';
+import { baseUrl } from './tests/e2e/support/project-env';
 
 // =============================================================================
-// Playwright — E2E do starter React (os testes validam CONTEÚDO, não só
-// status).
+// Playwright — E2E (os testes validam CONTEÚDO, não só status).
 //
-// Pré-requisitos:
-//   1. Stack de dev no ar, na raiz do monorepo:
-//        docker compose up -d react-nginx react-queue react-scheduler mailpit
-//      (o worker `react-queue` entrega os e-mails ao Mailpit).
+// ONDE: no site e no Mailpit DESTE projeto — E2E_BASE_URL e E2E_MAILPIT_URL,
+// ou, sem elas, a APP_URL e a DEV_MAIL_PORT do .env (ver
+// tests/e2e/support/project-env.ts). O global-setup confere, antes de
+// qualquer teste, que o site que responde é mesmo este projeto.
+//
+// Pré-requisitos (na raiz do projeto):
+//   1. O projeto no ar: docker compose up -d
+//      (o worker `queue` entrega os e-mails ao Mailpit).
 //   2. As pessoas fixas do E2E (idempotente — pode rodar sempre):
-//        docker compose exec -T react-app php artisan tinker \
+//        docker compose exec -T app php artisan tinker \
 //          --execute="require 'tests/e2e/fixtures.php';"
 //
-// Rodar em container (sem Node local), de starters/react:
+// Rodar em container (sem Node na máquina), na raiz do projeto:
 //   docker run --rm --network host --user $(id -u):$(id -g) -e HOME=/tmp \
 //     -v $(pwd):/work -w /work mcr.microsoft.com/playwright:v1.63.0-noble \
 //     npx playwright test
 //
-// O endereço é 127.0.0.1:8181, não localhost: cookie é por host, e em
-// localhost o XSRF-TOKEN do React seria o mesmo cookie do starter Livewire
-// (localhost:8180). Ver docker/nginx/dev.conf.
-//
 // Cada teste que CRIA pessoas (cadastro, convite) apaga tudo o que criou no
 // fim, passando ou falhando — pelo /admin, com a sessão do admin do E2E — e
-// as mensagens delas no Mailpit (tests/e2e/support/cleanup.ts).
+// as mensagens delas no Mailpit (tests/e2e/support/cleanup.ts). Espere 60 s
+// entre duas rodadas (o limite de borda por IP).
 // =============================================================================
 
 export default defineConfig({
@@ -40,7 +41,7 @@ export default defineConfig({
     workers: 2,
     reporter: [['list']],
     use: {
-        baseURL: process.env.E2E_BASE_URL ?? 'http://127.0.0.1:8181',
+        baseURL: baseUrl,
         // As pessoas que os testes criam nascem no idioma do navegador
         // quando ele é aceito: pt-BR, o padrão da plataforma.
         locale: 'pt-BR',
