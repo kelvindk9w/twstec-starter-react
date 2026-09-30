@@ -29,6 +29,32 @@ imagem de produção própria e as combinações de módulos no CI.
 que pergunta os módulos opcionais num terminal — ver
 [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#starter-react).
 
+## Docker de desenvolvimento (projeto criado)
+
+Um projeto criado a partir deste starter (pelo `twstec/kit` — com ou sem PHP
+na máquina — ou pelo `create-project` acima) já vem com o ambiente de
+desenvolvimento em Docker: o `compose.yaml` na raiz e o Dev Container do VS
+Code em `.devcontainer/`. O instalador grava no `.env` o nome do projeto e as
+portas do número dele (site `808N`, e-mails `802N`, Vite `803N`, banco
+`804N`), o endereço `http://<nome>.localhost:<porta>` e senhas geradas para o
+banco e o Redis.
+
+```bash
+docker compose up -d                          # sobe tudo; o banco e as migrations na primeira vez
+docker compose exec app php artisan test      # a suíte, dentro do container
+docker compose stop                           # para (os dados ficam)
+```
+
+Sobem o site (nginx + PHP-FPM), o PostgreSQL, o Redis, o Mailpit (os e-mails,
+em `http://<nome>.localhost:802N`), a fila, o agendador e o Vite (recarga ao
+vivo). Tudo é publicado só em `127.0.0.1`; o Redis nunca, o banco só com
+`COMPOSE_PROFILES=db-port` no `.env`. Trocar portas ou o nome: edite o `.env`
+e rode `docker compose up -d`. No VS Code: extensão **Dev Containers** →
+"Reopen in Container". Detalhes em
+[docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#o-docker-de-desenvolvimento-do-projeto-criado).
+(No monorepo, os dois arquivos ficam em `docker/dev/`; a publicação os põe no
+lugar.)
+
 ## Rodar (Docker de desenvolvimento, porta 8181)
 
 O `docker-compose.yml` da **raiz** sobe o React ao lado do Livewire (8180),

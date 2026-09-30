@@ -23,6 +23,26 @@ const admin =
 //   não permite fonte externa — a Instrument Sans vem do @fontsource
 //   (resources/css/app.css);
 // - a entrada do tema do /admin, quando ele está instalado.
+// Docker de desenvolvimento de um projeto criado (compose.yaml, serviço
+// `vite`): o Vite roda num container e o navegador o acha pelo endereço do
+// projeto (http://<nome>.localhost:<porta do Vite>, VITE_DEV_ORIGIN), não
+// pelo do container. Fora dele (npm run dev na máquina, o monorepo), nada
+// muda. VITE_DEV_POLLING=true: pastas do Windows montadas no Docker não
+// avisam quando um arquivo muda.
+const devOrigin = process.env.VITE_DEV_ORIGIN
+    ? new URL(process.env.VITE_DEV_ORIGIN)
+    : null;
+const devServer = devOrigin
+    ? {
+          host: '0.0.0.0',
+          port: 5173,
+          strictPort: true,
+          origin: devOrigin.origin,
+          hmr: { host: devOrigin.hostname, clientPort: Number(devOrigin.port) },
+      }
+    : {};
+const polling = process.env.VITE_DEV_POLLING === 'true';
+
 export default defineConfig({
     plugins: lazyPlugins(() => [
         laravel({
@@ -41,7 +61,9 @@ export default defineConfig({
         tailwindcss(),
     ]),
     server: {
+        ...devServer,
         watch: {
+            usePolling: polling,
             ignored: [
                 '**/.agents/**',
                 '**/.claude/**',
