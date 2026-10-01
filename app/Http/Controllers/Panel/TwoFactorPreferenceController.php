@@ -39,7 +39,8 @@ final class TwoFactorPreferenceController implements HasMiddleware
 
     /**
      * Passo 1: senha de transação → código por e-mail. Conta que não pode
-     * (protegida, sem senha de transação, opção desligada) recebe o motivo.
+     * (protegida, sem senha de transação, opção desligada, ou pedindo para
+     * desligar com o segundo fator obrigatório) recebe o motivo.
      *
      * @throws ValidationException
      */
@@ -51,6 +52,13 @@ final class TwoFactorPreferenceController implements HasMiddleware
 
         if ($reason !== null) {
             throw ValidationException::withMessages(['two_factor' => $reason]);
+        }
+
+        // Pedido de DESLIGAR com o segundo fator obrigatório
+        // (AUTH_TWO_FACTOR_REQUIRED): recusado aqui, antes de mandar código —
+        // e registrado na trilha pelo pacote.
+        if ($twoFactor->enabledFor($user)) {
+            $twoFactor->ensureCanDisable($user);
         }
 
         $request->validate(

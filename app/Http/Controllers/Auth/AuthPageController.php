@@ -11,13 +11,17 @@ use Symfony\Component\HttpFoundation\Response;
 use Twstec\Kit\Auth\Actions\CompleteTwoFactorLogin;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Auth\Contracts\Responses\EmailVerificationResponse;
+use Twstec\Kit\Auth\Contracts\Responses\TwoFactorSetupResponse;
 use Twstec\Kit\Auth\Enums\EmailVerificationOutcome;
 use Twstec\Kit\Auth\Http\Controllers\TwoFactorChallengeController;
+use Twstec\Kit\Auth\Http\Controllers\TwoFactorSetupController;
 use Twstec\Kit\Auth\PasswordPolicy;
 use Twstec\Kit\Auth\Services\TwoFactorLogin;
 use Twstec\Kit\Auth\Support\EmailVerification;
 use Twstec\Kit\Auth\Support\EmailVerificationResult;
+use Twstec\Kit\Auth\Support\Registration;
 use Twstec\Kit\Auth\Support\TwoFactorChallengeResult;
+use Twstec\Kit\Auth\Support\TwoFactorRequirement;
 
 /**
  * As TELAS de autenticação do starter React (páginas em
@@ -36,8 +40,14 @@ final class AuthPageController
         return Inertia::render('auth/login');
     }
 
+    /**
+     * Tela de cadastro — 404 com o cadastro público fechado
+     * (AUTH_REGISTRATION_ENABLED=false).
+     */
     public function register(): InertiaResponse
     {
+        Registration::ensureOpen();
+
         return Inertia::render('auth/register', [
             'passwordHint' => ucfirst(PasswordPolicy::hint()),
         ]);
@@ -102,6 +112,34 @@ final class AuthPageController
     {
         return Inertia::render('settings/transaction-password', [
             'minLength' => (int) config('auth.transaction_password.min_length', 8),
+        ]);
+    }
+
+    /**
+     * Configuração do segundo fator OBRIGATÓRIO (AUTH_TWO_FACTOR_REQUIRED).
+     * Sem nada a configurar (regra não vale para a conta, ou ela já ligou),
+     * segue para o destino como o próprio fluxo seguiria. A página mostra o
+     * passo em que a pessoa está: definir a senha de transação, mandar o
+     * código, digitar o código.
+     */
+    public function twoFactorSetup(Request $request, TwoFactorRequirement $requirement, TwoFactorLogin $twoFactor): InertiaResponse|Response
+    {
+        /** @var AuthUser $user */
+        $user = $request->user();
+
+        if (! $requirement->pendingFor($user)) {
+            return app(TwoFactorSetupResponse::class)->toResponse($request);
+        }
+
+        $graceEndsAt = $requirement->graceEndsAt($user);
+
+        return Inertia::render('auth/two-factor-setup', [
+            'email' => $user->email,
+            'hasTransactionPassword' => $user->hasTransactionPassword(),
+            'codeSent' => $user->hasTransactionPassword() && TwoFactorSetupController::codeSent($request),
+            'codeTtlMinutes' => $twoFactor->codeTtlMinutes(),
+            'transactionPasswordMinLength' => (int) config('auth.transaction_password.min_length', 8),
+            'graceEndsAt' => $graceEndsAt?->translatedFormat(__('auth.two_factor_setup.date_format')),
         ]);
     }
 }

@@ -3,6 +3,7 @@ import { deleteAccountsViaAdmin } from './support/cleanup';
 import { newPassword } from './support/env';
 import { confirmSensitive, login, newAddress, registerAndVerify, setTransactionPassword } from './support/flows';
 import { codeFrom, deleteMailpitMessagesTo, hasCode, hasVerificationLink, verificationLinkFrom, waitForMessage } from './support/mailpit';
+import { skipUnlessRegistrationOpen } from './support/registration';
 
 // =============================================================================
 // E2E da AUTENTICAÇÃO do starter React, de ponta a ponta e sem atalho, com
@@ -21,6 +22,8 @@ import { codeFrom, deleteMailpitMessagesTo, hasCode, hasVerificationLink, verifi
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test('cadastro → aviso → e-mail no Mailpit → link → painel liberado na página tentada', async ({ page, request, browser }) => {
+    await skipUnlessRegistrationOpen(request);
+
     const address = newAddress('verificacao');
     const seen = new Set<string>();
 
@@ -67,6 +70,8 @@ test('cadastro → aviso → e-mail no Mailpit → link → painel liberado na p
 });
 
 test('senha de transação → liga o 2FA no perfil → sai → senha → código do Mailpit → painel', async ({ page, request, browser }) => {
+    await skipUnlessRegistrationOpen(request);
+
     test.setTimeout(120_000);
 
     const address = newAddress('2fa');

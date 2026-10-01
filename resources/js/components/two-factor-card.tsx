@@ -12,6 +12,8 @@ type TwoFactor = {
     available: boolean;
     enabled: boolean;
     blockedReason: string | null;
+    /** AUTH_TWO_FACTOR_REQUIRED alcança esta conta (desligar é recusado). */
+    required: boolean;
 };
 
 /**
@@ -42,6 +44,11 @@ export function TwoFactorCard({ twoFactor }: { twoFactor: TwoFactor }) {
         >
             <div className="space-y-4">
                 <div className="flex flex-wrap items-center gap-3">
+                    {twoFactor.required && (
+                        <Badge variant="outline" data-two-factor-required>
+                            {t('panel.profile.two_factor_required')}
+                        </Badge>
+                    )}
                     <Badge
                         variant={twoFactor.enabled ? 'default' : 'secondary'}
                         data-two-factor-state

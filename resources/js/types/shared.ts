@@ -80,6 +80,11 @@ export type SharedProps = {
         status: string | null;
         verification_error: string | null;
     };
+    /**
+     * Segundo fator obrigatório na carência: até quando a conta pode adiar
+     * (data já formatada). null fora da carência.
+     */
+    twoFactorGrace: string | null;
     translations: Translations;
     sidebarOpen: boolean;
 };

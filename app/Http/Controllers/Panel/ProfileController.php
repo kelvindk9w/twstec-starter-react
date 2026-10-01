@@ -43,7 +43,9 @@ final class ProfileController
             'twoFactor' => [
                 'available' => TwoFactorLogin::available(),
                 'enabled' => $twoFactor->enabledFor($user),
-                'blockedReason' => $twoFactor->blockedReason($user),
+                // Ligada, o motivo é o de desligar (inclui a obrigatoriedade).
+                'blockedReason' => $twoFactor->enabledFor($user) ? $twoFactor->disableBlockedReason($user) : $twoFactor->blockedReason($user),
+                'required' => $twoFactor->requiredFor($user),
             ],
         ]);
     }

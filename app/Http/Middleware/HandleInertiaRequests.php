@@ -14,6 +14,7 @@ use Inertia\Inertia;
 use Inertia\Middleware;
 use Twstec\Kit\Auth\Contracts\AuthUser;
 use Twstec\Kit\Auth\Support\EmailVerification;
+use Twstec\Kit\Auth\Support\TwoFactorRequirement;
 use Twstec\Kit\Foundation\Kit;
 
 /**
@@ -101,10 +102,28 @@ class HandleInertiaRequests extends Middleware
                 'verification_error' => $request->session()->get('verification_error'),
             ],
 
+            // Segundo fator obrigatório na CARÊNCIA (AUTH_TWO_FACTOR_GRACE_DAYS):
+            // até quando a conta pode adiar a configuração (data já
+            // formatada), para o aviso do painel. Fora da carência, null — e
+            // quem precisa configurar já é levado à tela pelo pacote.
+            'twoFactorGrace' => fn (): ?string => $this->twoFactorGrace($request),
+
             'translations' => Inertia::once(fn (): array => FrontTranslations::for($locale))->as("translations.{$locale}"),
 
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    private function twoFactorGrace(Request $request): ?string
+    {
+        $user = $request->user();
+
+        if (! $user instanceof AuthUser) {
+            return null;
+        }
+
+        return app(TwoFactorRequirement::class)->graceEndsAt($user)
+            ?->translatedFormat(__('auth.two_factor_setup.date_format'));
     }
 
     private function canSeePanel(Request $request): bool

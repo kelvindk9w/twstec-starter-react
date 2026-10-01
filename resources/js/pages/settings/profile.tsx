@@ -35,6 +35,7 @@ type Props = {
         available: boolean;
         enabled: boolean;
         blockedReason: string | null;
+        required: boolean;
     };
 };
 

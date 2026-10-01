@@ -143,7 +143,7 @@ As **telas** (GET) são do starter (`App\Http\Controllers\Auth\AuthPageControlle
 → páginas em `resources/js/pages/auth`); os **envios** (POST) são os
 controllers do `twstec/kit-auth`, que trazem o próprio `throttle:sensitive`.
 Os endereços e os nomes das rotas são os mesmos do Livewire. O que volta ao
-navegador sai das **implementações Inertia dos 11 contratos de resposta** do
+navegador sai das **implementações Inertia dos 12 contratos de resposta** do
 pacote (`App\Http\Responses\Inertia`, registradas no `AppServiceProvider`):
 
 - **Quem atravessa a porta** (login, login pelo código do segundo fator,

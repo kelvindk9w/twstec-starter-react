@@ -3,6 +3,7 @@ import { deleteAccountsViaAdmin } from './support/cleanup';
 import { userEmail, userPassword, userState } from './support/env';
 import { confirmSensitive, login, newAddress, registerAndVerify, setTransactionPassword } from './support/flows';
 import { deleteMailpitMessagesTo } from './support/mailpit';
+import { skipUnlessRegistrationOpen } from './support/registration';
 
 // =============================================================================
 // E2E do PAINEL do starter React:
@@ -109,6 +110,8 @@ test.describe('com uma pessoa nova', () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 
     test('perfil: idioma, tema gravado na conta e foto (assinada; falsa recusada; remover)', async ({ page, request, browser }) => {
+        await skipUnlessRegistrationOpen(request);
+
         test.setTimeout(120_000);
 
         const address = newAddress('perfil');
@@ -183,6 +186,8 @@ test.describe('com uma pessoa nova', () => {
     });
 
     test('chave de API: confirmação de segurança e a secreta mostrada UMA vez', async ({ page, request, browser }) => {
+        await skipUnlessRegistrationOpen(request);
+
         test.setTimeout(120_000);
 
         const address = newAddress('chaves');

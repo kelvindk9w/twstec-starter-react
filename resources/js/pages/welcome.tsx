@@ -14,7 +14,7 @@ import { useRoute } from '@/lib/routes';
 export default function Welcome() {
     const { app, auth } = usePage().props;
     const { t } = useTrans();
-    const { route } = useRoute();
+    const { route, has } = useRoute();
 
     return (
         <>
@@ -54,11 +54,14 @@ export default function Welcome() {
                             </Button>
                         ) : (
                             <>
-                                <Button asChild>
-                                    <Link href={route('register')}>
-                                        {t('landing.nav.register')}
-                                    </Link>
-                                </Button>
+                                {/* Cadastro fechado (AUTH_REGISTRATION_ENABLED=false): a rota não está no mapa. */}
+                                {has('register') && (
+                                    <Button asChild>
+                                        <Link href={route('register')}>
+                                            {t('landing.nav.register')}
+                                        </Link>
+                                    </Button>
+                                )}
                                 <Button asChild variant="secondary">
                                     <Link href={route('login')}>
                                         {t('landing.nav.login')}

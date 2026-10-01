@@ -17,7 +17,7 @@ import { useRoute } from '@/lib/routes';
  */
 export default function Login() {
     const { t } = useTrans();
-    const { route } = useRoute();
+    const { route, has } = useRoute();
 
     return (
         <Form
@@ -94,11 +94,14 @@ export default function Login() {
                         </Button>
                     </div>
 
-                    <div className="text-center text-sm text-muted-foreground">
-                        <TextLink href={route('register')} tabIndex={6}>
-                            {t('auth.ui.register_link')}
-                        </TextLink>
-                    </div>
+                    {/* Cadastro fechado (AUTH_REGISTRATION_ENABLED=false): sem link. */}
+                    {has('register') && (
+                        <div className="text-center text-sm text-muted-foreground">
+                            <TextLink href={route('register')} tabIndex={6}>
+                                {t('auth.ui.register_link')}
+                            </TextLink>
+                        </div>
+                    )}
                 </>
             )}
         </Form>

@@ -130,6 +130,8 @@ it('as props compartilhadas trazem só o esperado', function () {
 
     expect(array_keys($props))->toEqualCanonicalizing([
         'errors', 'app', 'auth', 'kit', 'navigation', 'accountMenu', 'routes', 'flash', 'translations', 'sidebarOpen', 'overview',
+        // Prazo da carência do segundo fator obrigatório (só a data formatada; issue #22).
+        'twoFactorGrace',
     ]);
 });
 

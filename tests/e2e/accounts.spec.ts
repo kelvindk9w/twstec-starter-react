@@ -3,6 +3,7 @@ import { deleteAccountsViaAdmin } from './support/cleanup';
 import { newPassword, transactionPassword } from './support/env';
 import { currentAccount, newAddress, registerAndVerify, setTransactionPassword, switchAccount } from './support/flows';
 import { codeFrom, deleteMailpitMessagesTo, hasCode, hasInvitationLink, waitForMessage } from './support/mailpit';
+import { skipUnlessRegistrationOpen } from './support/registration';
 
 // =============================================================================
 // E2E das CONTAS COM MEMBROS no starter React, de ponta a ponta e sem atalho:
@@ -23,6 +24,8 @@ import { codeFrom, deleteMailpitMessagesTo, hasCode, hasInvitationLink, waitForM
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test('convida → e-mail → aceita criando acesso → projetos da conta → troca de conta → transfere → remove', async ({ browser, request }) => {
+    await skipUnlessRegistrationOpen(request);
+
     test.setTimeout(180_000);
 
     const owner = newAddress('dona');

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Support;
 
 use Illuminate\Support\Facades\Route;
+use Twstec\Kit\Auth\Support\Registration;
 
 /**
  * Os endereços que as páginas React usam, pelo NOME da rota.
@@ -40,6 +41,9 @@ final class FrontRoutes
         'two-factor.challenge',
         'two-factor.resend',
         'two-factor.cancel',
+        'two-factor.setup',
+        'two-factor.setup.code',
+        'two-factor.setup.store',
         'verification.notice',
         'verification.send',
         'dashboard',
@@ -101,6 +105,13 @@ final class FrontRoutes
         $routes = [];
 
         foreach (self::NAMES as $name) {
+            // Cadastro público fechado (AUTH_REGISTRATION_ENABLED=false): a
+            // rota sai do mapa, e as telas (que perguntam `has('register')`)
+            // não mostram o link.
+            if ($name === 'register' && ! Registration::enabled()) {
+                continue;
+            }
+
             $route = Route::getRoutes()->getByName($name);
 
             if ($route === null) {

@@ -15,6 +15,7 @@ use App\Http\Responses\Inertia\RegisterResponse;
 use App\Http\Responses\Inertia\TwoFactorChallengeResponse;
 use App\Http\Responses\Inertia\TwoFactorLoginResponse;
 use App\Http\Responses\Inertia\TwoFactorRequiredResponse;
+use App\Http\Responses\Inertia\TwoFactorSetupResponse;
 use App\Http\Responses\Inertia\VerifyEmailResponse;
 use App\Providers\Filament\AdminPanelProvider;
 use Illuminate\Support\ServiceProvider;
@@ -46,6 +47,7 @@ class AppServiceProvider extends ServiceProvider
         Responses\FailedPasswordResetResponse::class => FailedPasswordResetResponse::class,
         Responses\VerifyEmailResponse::class => VerifyEmailResponse::class,
         Responses\EmailVerificationResponse::class => EmailVerificationResponse::class,
+        Responses\TwoFactorSetupResponse::class => TwoFactorSetupResponse::class,
     ];
 
     /**
