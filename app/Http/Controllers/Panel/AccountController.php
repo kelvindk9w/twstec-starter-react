@@ -157,7 +157,8 @@ final class AccountController implements HasMiddleware
      */
     public function deleteCode(Request $request, DeleteAccount $delete): RedirectResponse
     {
-        $delete->authorize($this->user($request));
+        $this->authorizeDeletion($request, $delete);
+
         $this->requireTransactionPassword($request, 'delete_account', __('panel.account.sensitive_requires_password'));
 
         return $this->afterStage($request);
@@ -171,7 +172,7 @@ final class AccountController implements HasMiddleware
      */
     public function destroy(Request $request, DeleteAccount $delete): RedirectResponse
     {
-        $delete->authorize($this->user($request));
+        $this->authorizeDeletion($request, $delete);
         $nome = Accounts::currentOrFail()->displayName();
 
         $token = $this->sensitiveToken($request);
@@ -179,6 +180,12 @@ final class AccountController implements HasMiddleware
         try {
             $delete->handle($this->user($request), $token);
         } catch (ValidationException $exception) {
+            // A recusa por impedimento (campo `account`) vai para junto do
+            // botão; a do código, para o campo do código.
+            if (array_key_exists('account', $exception->errors())) {
+                throw ValidationException::withMessages(['delete_account' => $exception->errors()['account']]);
+            }
+
             throw $this->asCodeError($exception);
         }
 
@@ -188,6 +195,22 @@ final class AccountController implements HasMiddleware
     // =========================================================================
     // Internos
     // =========================================================================
+
+    /**
+     * A pré-checagem da exclusão. Impedimento de exclusão declarado
+     * (twstec/kit-accounts) chega como erro no campo `account`: vai para
+     * junto do botão, antes de pedir o código.
+     *
+     * @throws ValidationException
+     */
+    private function authorizeDeletion(Request $request, DeleteAccount $delete): void
+    {
+        try {
+            $delete->authorize($this->user($request));
+        } catch (ValidationException $exception) {
+            throw ValidationException::withMessages(['delete_account' => collect($exception->errors())->flatten()->all()]);
+        }
+    }
 
     private function afterStage(Request $request): RedirectResponse
     {

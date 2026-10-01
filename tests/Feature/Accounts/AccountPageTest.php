@@ -3,7 +3,10 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\URL;
 use Inertia\Testing\AssertableInertia as Assert;
 use Twstec\Kit\Accounts\Account\Enums\AccountRole;
@@ -13,6 +16,9 @@ use Twstec\Kit\Accounts\Account\Models\Account;
 use Twstec\Kit\Accounts\Account\Models\AccountInvitation;
 use Twstec\Kit\Accounts\Account\Services\AccountService;
 use Twstec\Kit\Accounts\Accounts;
+use Twstec\Kit\Accounts\Deletion\DeletionImpediment;
+use Twstec\Kit\Accounts\Deletion\DeletionImpediments;
+use Twstec\Kit\Accounts\Deletion\DeletionRequest;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
 
@@ -328,6 +334,45 @@ it('excluir: só o dono, com a confirmação sensível; os dados saem e a pessoa
         ->and(AuditEvent::query()->where('action', 'account.deleted')->where('outcome', 'success')->count())->toBe(1);
 
     $this->withHeaders(inertiaHeaders())->get('/account')->assertJsonPath('props.account.uuid', contaPessoal($dono)->uuid);
+})->group('accounts');
+
+it('excluir com IMPEDIMENTO declarado: a recusa vem antes do código, junto do botão; nada sai', function () {
+    ['empresa' => $empresa, 'dono' => $dono] = contaComEquipe();
+    entrarNa($dono, $empresa);
+
+    // Ex.: registros que a lei manda guardar e que apontam para a conta.
+    app(DeletionImpediments::class)->register(fn (DeletionRequest $pedido): array => in_array((int) $empresa->id, $pedido->accountIds(), true)
+        ? [new DeletionImpediment('retained_records', 'Há registros desta conta que a lei manda guardar.')]
+        : []);
+
+    $this->post('/account/delete/code', ['stage' => 'check'])
+        ->assertSessionHasErrors(['delete_account' => 'Há registros desta conta que a lei manda guardar.']);
+
+    $this->delete('/account', ['code' => '000000'])
+        ->assertSessionHasErrors(['delete_account' => 'Há registros desta conta que a lei manda guardar.']);
+
+    expect(Account::query()->whereKey($empresa->id)->exists())->toBeTrue()
+        ->and(AuditEvent::query()->where('action', 'account.deleted')->where('outcome', 'success')->exists())->toBeFalse()
+        ->and(AuditEvent::query()->where('action', 'account.deleted')->where('outcome', 'denied')->count())->toBe(2);
+
+    Mail::assertNothingQueued();
+})->group('accounts');
+
+it('excluir com registro do aplicativo (RESTRICT) que ninguém declarou: recusa limpa junto do botão, transação desfeita', function () {
+    ['empresa' => $empresa, 'dono' => $dono] = contaComEquipe();
+    Schema::create('registros_guardados', function (Blueprint $tabela): void {
+        $tabela->id();
+        $tabela->foreignId('account_id')->constrained('accounts')->restrictOnDelete();
+    });
+    DB::table('registros_guardados')->insert(['account_id' => $empresa->id]);
+    entrarNa($dono, $empresa);
+
+    confirmarSensivel('/account/delete/code', 'delete', '/account')
+        ->assertSessionHasErrors(['delete_account' => __('accounts.deletion.referenced')]);
+
+    expect(Account::query()->whereKey($empresa->id)->exists())->toBeTrue()
+        ->and($empresa->memberships()->count())->toBeGreaterThan(1)
+        ->and(AuditEvent::query()->where('action', 'account.deleted')->where('outcome', 'success')->exists())->toBeFalse();
 })->group('accounts');
 
 it('a conta pessoal: sem renomear, transferir nem excluir; aceita membros', function () {
