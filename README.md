@@ -247,7 +247,8 @@ chave de API com a secreta mostrada uma vez, projetos, e o `/admin` (login e
 uma ação auditada).
 
 ```bash
-# Pessoas fixas do E2E (idempotente): e2e@example.com e admin-e2e@example.com
+# Pessoas fixas do E2E (idempotente; rode antes de cada rodada): e2e@,
+# admin-e2e@ e as dos testes de login pela tela, login-e2e@ e admin-login-e2e@example.com
 docker compose exec -T react-app php artisan tinker --execute="require 'tests/e2e/fixtures.php';"
 
 # De starters/react (espere 61 s entre duas rodadas: limite de borda por IP)
@@ -263,6 +264,14 @@ do Filament pelo nome e confere refazendo a busca). No fim da suíte, uma
 varredura (`tests/e2e/global-teardown.ts`) apaga qualquer `e2e-…` que um teste
 interrompido tenha deixado. Os seletores são ids e atributos `data-*`, não
 textos.
+
+**Segundo fator obrigatório e cadastro fechado:** a suíte roda com
+`AUTH_TWO_FACTOR_REQUIRED` = `none`, `admins` ou `all` e com
+`AUTH_REGISTRATION_ENABLED` = `true` ou `false`. As pessoas fixas que a regra
+alcança nascem com o segundo fator ligado, o login lê o código no Mailpit, e
+a pessoa nova passa pela configuração dele (ou nasce pelo `/admin`, com o
+cadastro fechado). Como trocar a combinação: `docs/testes.md` do kit, "E2E
+com segundo fator obrigatório e cadastro fechado".
 
 ## Produção (imagem Docker)
 

@@ -1,20 +1,25 @@
 import { expect, test } from '@playwright/test';
 import { deleteAccountsViaAdmin } from './support/cleanup';
-import { userEmail, userPassword, userState } from './support/env';
-import { confirmSensitive, login, newAddress, registerAndVerify, setTransactionPassword } from './support/flows';
+import { loginUserEmail, userPassword, userState } from './support/env';
+import { confirmSensitive, loginWithCode, newAddress, newPerson, setTransactionPassword } from './support/flows';
 import { deleteMailpitMessagesTo } from './support/mailpit';
-import { skipUnlessRegistrationOpen } from './support/registration';
 
 // =============================================================================
 // E2E do PAINEL do starter React:
 //
-// - sem sessão: login pela tela → painel; o /admin manda ao login dele;
+// - sem sessão: login pela tela → painel (a pessoa fixa própria do teste,
+//   login-e2e@, com o código do Mailpit quando a conta tem o segundo fator);
+//   o /admin manda ao login dele;
 // - com a sessão do global-setup (e2e@example.com): o /admin recusa (403), o
 //   menu leva às telas, e projetos criar → renomear → arquivar → reativar →
 //   excluir (sem deixar resto na conta dessa pessoa);
-// - com uma pessoa NOVA (apagada no fim): perfil — idioma, tema (gravado na
-//   conta) e foto (URL assinada; arquivo falso recusado; remover) — e chave
-//   de API com a secreta mostrada UMA vez.
+// - com uma pessoa NOVA (apagada no fim — pelo cadastro, ou pelo /admin com
+//   ele fechado; com o segundo fator obrigatório, passando pela configuração
+//   dele): perfil — idioma, tema (gravado na conta) e foto (URL assinada;
+//   arquivo falso recusado; remover) — e chave de API com a secreta mostrada
+//   UMA vez. Com o segundo fator obrigatório, a confirmação de segurança da
+//   chave vem logo depois da configuração e manda o código na hora (o código
+//   da configuração é de outra família e não segura o da confirmação).
 // =============================================================================
 
 // PNG 96x96 REAL: a validação de upload do kit lê o CONTEÚDO (magic bytes e
@@ -25,8 +30,8 @@ const PNG_BASE64 =
 test.describe('sem sessão', () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 
-    test('login pela tela → painel, com o menu das telas', async ({ page }) => {
-        await login(page, userEmail, userPassword);
+    test('login pela tela → painel, com o menu das telas', async ({ page, request }) => {
+        await loginWithCode(page, request, loginUserEmail, userPassword);
 
         await expect(page).toHaveURL(/\/dashboard$/);
         const nav = page.locator('[data-sidebar="sidebar"]').first();
@@ -110,15 +115,13 @@ test.describe('com uma pessoa nova', () => {
     test.use({ storageState: { cookies: [], origins: [] } });
 
     test('perfil: idioma, tema gravado na conta e foto (assinada; falsa recusada; remover)', async ({ page, request, browser }) => {
-        await skipUnlessRegistrationOpen(request);
-
         test.setTimeout(120_000);
 
         const address = newAddress('perfil');
         const seen = new Set<string>();
 
         try {
-            await registerAndVerify(page, request, address, 'Pessoa Perfil E2E', seen);
+            await newPerson(page, request, browser, address, 'Pessoa Perfil E2E', seen);
 
             await test.step('idioma: inglês e de volta ao português', async () => {
                 await page.goto('/profile');
@@ -186,16 +189,18 @@ test.describe('com uma pessoa nova', () => {
     });
 
     test('chave de API: confirmação de segurança e a secreta mostrada UMA vez', async ({ page, request, browser }) => {
-        await skipUnlessRegistrationOpen(request);
-
         test.setTimeout(120_000);
 
         const address = newAddress('chaves');
         const seen = new Set<string>();
 
         try {
-            await registerAndVerify(page, request, address, 'Pessoa Chaves E2E', seen);
-            await setTransactionPassword(page);
+            const { twoFactorRequired } = await newPerson(page, request, browser, address, 'Pessoa Chaves E2E', seen);
+
+            // A configuração obrigatória já definiu a senha de transação.
+            if (!twoFactorRequired) {
+                await setTransactionPassword(page);
+            }
 
             await page.goto('/api-keys');
             await page.locator('[data-test="new-key"]').click();

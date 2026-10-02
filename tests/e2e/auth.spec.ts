@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { deleteAccountsViaAdmin } from './support/cleanup';
 import { newPassword } from './support/env';
-import { confirmSensitive, login, newAddress, registerAndVerify, setTransactionPassword } from './support/flows';
+import { completeTwoFactorSetup, confirmSensitive, login, newAddress, newPerson, setTransactionPassword } from './support/flows';
 import { codeFrom, deleteMailpitMessagesTo, hasCode, hasVerificationLink, verificationLinkFrom, waitForMessage } from './support/mailpit';
 import { skipUnlessRegistrationOpen } from './support/registration';
 
@@ -10,13 +10,19 @@ import { skipUnlessRegistrationOpen } from './support/registration';
 // os e-mails REAIS entregues pelo worker ao Mailpit:
 //
 // - cadastro → tela de aviso (painel fechado) → link do e-mail → painel,
-//   voltando à página que a pessoa tentou abrir;
-// - senha de transação → liga o segundo fator no perfil (senha de transação
-//   + código) → sai → entra com a senha → tela do código (sessão ainda NÃO
-//   autenticada) → código errado recusa → código do e-mail entra.
+//   voltando à página que a pessoa tentou abrir (com o segundo fator
+//   obrigatório para todos, depois de configurá-lo). Pula com o cadastro
+//   público fechado — o estado fechado é do registration.spec.ts;
+// - o segundo fator ligado por um dos dois caminhos da instalação: opcional,
+//   senha de transação → liga no perfil (senha de transação + código);
+//   obrigatório (AUTH_TWO_FACTOR_REQUIRED=all), a configuração ao entrar, e o
+//   perfil mostra o selo e o desligar travado com o motivo. Nos dois: sai →
+//   entra com a senha → tela do código (sessão ainda NÃO autenticada) →
+//   código errado recusa → código do e-mail entra.
 //
-// Pessoas NOVAS a cada rodada (e-mail com carimbo); cada teste apaga o que
-// criou no fim, passando ou falhando (support/cleanup.ts).
+// Pessoas NOVAS a cada rodada (e-mail com carimbo; pelo cadastro, ou pelo
+// /admin com ele fechado); cada teste apaga o que criou no fim, passando ou
+// falhando (support/cleanup.ts).
 // =============================================================================
 
 test.use({ storageState: { cookies: [], origins: [] } });
@@ -56,8 +62,15 @@ test('cadastro → aviso → e-mail no Mailpit → link → painel liberado na p
         expect(link).toContain('expires=');
         expect(message.Text).toContain('/email/verify/');
 
-        // O link (na mesma sessão) libera o painel e volta à página tentada.
+        // O link (na mesma sessão) libera o painel e volta à página tentada —
+        // com o segundo fator obrigatório, depois da configuração dele.
         await page.goto(link);
+        await expect(page).toHaveURL(/\/(profile|two-factor\/setup)$/);
+
+        if (new URL(page.url()).pathname === '/two-factor/setup') {
+            await completeTwoFactorSetup(page, request, address, seen);
+        }
+
         await expect(page).toHaveURL(/\/profile$/);
         await expect(page.locator('#name')).toHaveValue('Pessoa Verificação E2E');
 
@@ -69,46 +82,55 @@ test('cadastro → aviso → e-mail no Mailpit → link → painel liberado na p
     }
 });
 
-test('senha de transação → liga o 2FA no perfil → sai → senha → código do Mailpit → painel', async ({ page, request, browser }) => {
-    await skipUnlessRegistrationOpen(request);
-
+test('o segundo fator ligado (perfil ou configuração obrigatória) → sai → senha → código do Mailpit → painel', async ({ page, request, browser }) => {
     test.setTimeout(120_000);
 
     const address = newAddress('2fa');
     const seen = new Set<string>();
 
     try {
-        await test.step('conta nova com e-mail confirmado', async () => {
-            await registerAndVerify(page, request, address, 'Pessoa 2FA E2E', seen);
+        let required = false;
+
+        await test.step('conta nova, já no painel', async () => {
+            ({ twoFactorRequired: required } = await newPerson(page, request, browser, address, 'Pessoa 2FA E2E', seen));
         });
 
-        await test.step('sem senha de transação, o segundo fator fica bloqueado com o motivo', async () => {
-            await page.goto('/profile');
-            await expect(page.locator('[data-test="two-factor-toggle"]')).toBeDisabled();
-            await expect(page.locator('[data-two-factor-blocked]')).toBeVisible();
-        });
+        if (required) {
+            await test.step('obrigatório: o perfil mostra o selo e não deixa desligar, com o motivo', async () => {
+                await page.goto('/profile');
+                await expect(page.locator('[data-two-factor-required]')).toBeVisible();
+                await expect(page.locator('[data-test="two-factor-toggle"]')).toBeDisabled();
+                await expect(page.locator('[data-two-factor-blocked]')).toContainText('obrigatória');
+            });
+        } else {
+            await test.step('sem senha de transação, o segundo fator fica bloqueado com o motivo', async () => {
+                await page.goto('/profile');
+                await expect(page.locator('[data-test="two-factor-toggle"]')).toBeDisabled();
+                await expect(page.locator('[data-two-factor-blocked]')).toBeVisible();
+            });
 
-        await test.step('define a senha de transação', async () => {
-            await setTransactionPassword(page);
-        });
+            await test.step('define a senha de transação', async () => {
+                await setTransactionPassword(page);
+            });
 
-        await test.step('liga o segundo fator: senha de transação + código por e-mail', async () => {
-            await page.goto('/profile');
-            const state = page.locator('[data-two-factor-state]');
-            const before = await state.textContent();
-            await page.locator('[data-test="two-factor-toggle"]').click();
+            await test.step('liga o segundo fator: senha de transação + código por e-mail', async () => {
+                await page.goto('/profile');
+                const state = page.locator('[data-two-factor-state]');
+                const before = await state.textContent();
+                await page.locator('[data-test="two-factor-toggle"]').click();
 
-            // Senha de transação errada: recusa, sem código.
-            const dialog = page.locator('[data-sensitive-dialog]');
-            await dialog.locator('#sensitive_transaction_password').fill('errada-123');
-            await dialog.locator('[data-sensitive-send]').click();
-            await expect(dialog.locator('#sensitive_transaction_password')).toHaveAttribute('aria-invalid', 'true');
-            await expect(dialog.locator('#sensitive_code')).toHaveCount(0);
+                // Senha de transação errada: recusa, sem código.
+                const dialog = page.locator('[data-sensitive-dialog]');
+                await dialog.locator('#sensitive_transaction_password').fill('errada-123');
+                await dialog.locator('[data-sensitive-send]').click();
+                await expect(dialog.locator('#sensitive_transaction_password')).toHaveAttribute('aria-invalid', 'true');
+                await expect(dialog.locator('#sensitive_code')).toHaveCount(0);
 
-            await confirmSensitive(page, request, address, seen);
-            await expect(state).not.toHaveText(before ?? '');
-            await expect(page.locator('[data-two-factor-blocked]')).toHaveCount(0);
-        });
+                await confirmSensitive(page, request, address, seen);
+                await expect(state).not.toHaveText(before ?? '');
+                await expect(page.locator('[data-two-factor-blocked]')).toHaveCount(0);
+            });
+        }
 
         await test.step('sai e entra com a senha: a sessão fica no estado intermediário', async () => {
             await page.context().clearCookies();

@@ -1,14 +1,14 @@
 import { expect, test } from '@playwright/test';
 import { deleteAccountsViaAdmin } from './support/cleanup';
 import { newPassword, transactionPassword } from './support/env';
-import { currentAccount, newAddress, registerAndVerify, setTransactionPassword, switchAccount } from './support/flows';
+import { completeTwoFactorSetup, currentAccount, newAddress, newPerson, setTransactionPassword, switchAccount } from './support/flows';
 import { codeFrom, deleteMailpitMessagesTo, hasCode, hasInvitationLink, waitForMessage } from './support/mailpit';
-import { skipUnlessRegistrationOpen } from './support/registration';
 
 // =============================================================================
 // E2E das CONTAS COM MEMBROS no starter React, de ponta a ponta e sem atalho:
 //
-// dona nova (cadastro + e-mail confirmado + senha de transação) → cria a conta
+// dona nova (cadastro + e-mail confirmado + senha de transação; com o
+// cadastro público fechado, criada pelo /admin) → cria a conta
 // de empresa e um projeto nela → convida por e-mail → o convite REAL chega ao
 // Mailpit → a convidada (sem conta, no celular) abre o link, cria o acesso e
 // entra direto na conta → vê o projeto da conta → troca para a conta pessoal
@@ -19,13 +19,14 @@ import { skipUnlessRegistrationOpen } from './support/registration';
 // Duas sessões de navegador separadas (dona e convidada); nenhuma usa a
 // sessão compartilhada do e2e.json. Limpeza no `finally`: as duas pessoas
 // pelo /admin (a conta de empresa sai com a última dona) e as mensagens.
+//
+// Com o segundo fator obrigatório (AUTH_TWO_FACTOR_REQUIRED=all), a dona e a
+// convidada passam pela configuração dele ao entrar (support/flows.ts).
 // =============================================================================
 
 test.use({ storageState: { cookies: [], origins: [] } });
 
 test('convida → e-mail → aceita criando acesso → projetos da conta → troca de conta → transfere → remove', async ({ browser, request }) => {
-    await skipUnlessRegistrationOpen(request);
-
     test.setTimeout(180_000);
 
     const owner = newAddress('dona');
@@ -40,9 +41,13 @@ test('convida → e-mail → aceita criando acesso → projetos da conta → tro
     const memberPage = await memberContext.newPage();
 
     try {
-        await test.step('dona nova: cadastro, e-mail confirmado e senha de transação', async () => {
-            await registerAndVerify(ownerPage, request, owner, 'Dona E2E Contas', seen);
-            await setTransactionPassword(ownerPage);
+        await test.step('dona nova: no painel, com senha de transação', async () => {
+            const { twoFactorRequired } = await newPerson(ownerPage, request, browser, owner, 'Dona E2E Contas', seen);
+
+            // A configuração obrigatória já definiu a senha de transação.
+            if (!twoFactorRequired) {
+                await setTransactionPassword(ownerPage);
+            }
         });
 
         await test.step('cria a conta de empresa (vira a atual) e um projeto nela', async () => {
@@ -94,6 +99,13 @@ test('convida → e-mail → aceita criando acesso → projetos da conta → tro
             await memberPage.locator('[data-invitation-register] button[type="submit"]').click();
 
             // Sem passar pela verificação de e-mail: o link provou o e-mail.
+            // Com o segundo fator obrigatório, a configuração vem antes.
+            await expect(memberPage).toHaveURL(/\/(dashboard|two-factor\/setup)$/);
+
+            if (new URL(memberPage.url()).pathname === '/two-factor/setup') {
+                await completeTwoFactorSetup(memberPage, request, member, seen);
+            }
+
             await expect(memberPage).toHaveURL(/\/dashboard$/);
             await expect(currentAccount(memberPage)).toHaveText(company);
         });

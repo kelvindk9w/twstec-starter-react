@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { adminEmail, adminPassword, adminState } from './support/env';
+import { adminEmail, adminPassword, adminState, loginAdminEmail } from './support/env';
 import { adminLogin, adminReady } from './support/flows';
 
 // =============================================================================
@@ -9,12 +9,15 @@ import { adminLogin, adminReady } from './support/flows';
 // com as duas linhas na tela de Auditoria.
 // =============================================================================
 
-test('login do admin pela tela do /admin', async ({ browser }) => {
+test('login do admin pela tela do /admin', async ({ browser, request }) => {
     const context = await browser.newContext({ storageState: { cookies: [], origins: [] } });
     const page = await context.newPage();
 
     try {
-        await adminLogin(page, adminEmail, adminPassword);
+        // A pessoa fixa própria deste teste (admin-login-e2e@): com o segundo
+        // fator obrigatório, o global-setup acabou de mandar código para o
+        // admin do E2E, e o código novo dele só sairia depois do intervalo.
+        await adminLogin(page, request, loginAdminEmail, adminPassword);
 
         await expect(page).toHaveURL(/\/admin\/?$/);
         await expect(page.locator('.fi-sidebar')).toBeVisible();

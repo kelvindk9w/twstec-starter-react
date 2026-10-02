@@ -86,7 +86,7 @@ it('configuração completa: senha de transação → código → liga e volta a
     $this->get('/two-factor/setup')->assertInertia(fn (Assert $page) => $page->where('codeSent', true));
 
     $this->post('/two-factor/setup', [
-        'code' => lastVerificationCode(VerificationPurpose::SensitiveAction),
+        'code' => lastVerificationCode(VerificationPurpose::TwoFactorSetup),
     ], inertiaHeaders())->assertStatus(409)->assertHeader('X-Inertia-Location', url('/profile'));
 
     expect($user->fresh()->two_factor_enabled_at)->not->toBeNull()
@@ -97,6 +97,43 @@ it('configuração completa: senha de transação → código → liga e volta a
         ->where('twoFactor.enabled', true)
         ->where('twoFactor.required', true)
         ->where('twoFactor.blockedReason', __('auth.two_factor.required_cannot_disable')));
+});
+
+it('logo depois da configuração, a primeira confirmação de segurança manda o código na hora — o intervalo vale dentro de cada família', function (): void {
+    // O intervalo padrão (60 s), com o relógio parado no segundo: sem a
+    // família própria da configuração, o primeiro pedido abaixo esperaria.
+    config()->set('auth.verification.resend_cooldown_seconds', 60);
+    config()->set('auth.two_factor.required', 'all');
+    $this->freezeSecond();
+
+    $user = User::factory()->create(['transaction_password' => 'Trans4cao!Segura']);
+    $this->actingAs($user);
+
+    $this->from('/two-factor/setup')->post('/two-factor/setup/code', ['transaction_password' => 'Trans4cao!Segura'])
+        ->assertSessionHasNoErrors();
+    $this->post('/two-factor/setup', ['code' => lastVerificationCode(VerificationPurpose::TwoFactorSetup)])
+        ->assertSessionHasNoErrors();
+
+    expect($user->fresh()->two_factor_enabled_at)->not->toBeNull();
+
+    // No mesmo segundo: ainda pede a senha de transação certa…
+    $this->postJson('/sensitive-actions/code', ['transaction_password' => 'errada'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['transaction_password' => __('auth.transaction_password.invalid')]);
+
+    // …e, com ela, o código da confirmação sai sem "aguarde".
+    $this->postJson('/sensitive-actions/code', ['transaction_password' => 'Trans4cao!Segura'])
+        ->assertOk()
+        ->assertJsonPath('message', __('auth.verification_code.sent'));
+
+    $this->postJson('/sensitive-actions/confirm', ['code' => lastVerificationCode(VerificationPurpose::SensitiveAction)])
+        ->assertOk()
+        ->assertJsonStructure(['token', 'expires_at']);
+
+    // Dentro da família da confirmação, o intervalo continua: o próximo espera.
+    $this->postJson('/sensitive-actions/code', ['transaction_password' => 'Trans4cao!Segura'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['transaction_password' => __('auth.verification_code.resend_cooldown', ['seconds' => 60])]);
 });
 
 it('com a regra valendo, desligar é recusado no servidor (antes do código) e a recusa vai para a trilha', function (): void {
@@ -155,7 +192,7 @@ it('`admins`: o /admin exige o segundo fator, e a configuração devolve ao /adm
 
     $this->from('/two-factor/setup')->post('/two-factor/setup/code', ['transaction_password' => 'Transacao123']);
     $this->post('/two-factor/setup', [
-        'code' => lastVerificationCode(VerificationPurpose::SensitiveAction),
+        'code' => lastVerificationCode(VerificationPurpose::TwoFactorSetup),
     ], inertiaHeaders())->assertStatus(409)->assertHeader('X-Inertia-Location', url('/admin/users'));
 
     $this->get('/admin/users')->assertOk();

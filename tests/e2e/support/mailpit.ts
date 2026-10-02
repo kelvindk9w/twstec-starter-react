@@ -73,9 +73,20 @@ export const hasCode = (message: MailpitMessage): boolean => /\b\d{6}\b/.test(me
 export const hasVerificationLink = (message: MailpitMessage): boolean => message.HTML.includes('/email/verify/');
 export const hasInvitationLink = (message: MailpitMessage): boolean => /\/invitations\/[0-9a-f]{64}/.test(message.HTML);
 
+/**
+ * As mensagens que JÁ estão no Mailpit para `address` — o `seen` inicial de
+ * quem lê o código de uma pessoa FIXA (que acumula mensagens de testes
+ * anteriores): só o que chegar depois conta.
+ */
+export async function messagesAlreadyTo(request: APIRequestContext, address: string): Promise<Set<string>> {
+    const search = await request.get(`${mailpitUrl}/api/v1/search`, { params: { query: `to:"${address}"`, limit: '500' } });
+
+    return new Set(((await search.json()).messages ?? []).map((m: { ID: string }) => m.ID));
+}
+
 /** Apaga do Mailpit todas as mensagens enviadas para `address`. */
 export async function deleteMailpitMessagesTo(request: APIRequestContext, address: string): Promise<void> {
-    const search = await request.get(`${mailpitUrl}/api/v1/search`, { params: { query: `to:"${address}"` } });
+    const search = await request.get(`${mailpitUrl}/api/v1/search`, { params: { query: `to:"${address}"`, limit: '500' } });
     const ids = ((await search.json()).messages ?? []).map((m: { ID: string }) => m.ID);
 
     if (ids.length > 0) {

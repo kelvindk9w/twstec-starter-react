@@ -1,7 +1,7 @@
 import { chromium, request as requestFactory, type FullConfig } from '@playwright/test';
 import { sweepLeftovers } from './support/cleanup';
-import { mailpitUrl } from './support/env';
-import { sweepMailpit } from './support/mailpit';
+import { fixedPeople, mailpitUrl } from './support/env';
+import { deleteMailpitMessagesTo, sweepMailpit } from './support/mailpit';
 import { isolationProblem } from './support/project-env';
 
 // =============================================================================
@@ -9,7 +9,9 @@ import { isolationProblem } from './support/project-env';
 // teste já apaga o que criou no `finally`; um teste interrompido (tempo
 // esgotado, navegador fechado no meio) pode não conseguir. Aqui, no fim da
 // suíte, qualquer pessoa `e2e-…` que tenha ficado sai pelo /admin e as
-// mensagens `e2e-…` saem do Mailpit — a rodada termina sem lixo no banco.
+// mensagens `e2e-…` e as das pessoas fixas (códigos de login, com o segundo
+// fator obrigatório) saem do Mailpit — a rodada termina sem lixo no banco nem
+// na caixa.
 // Se sobrou alguém, a varredura avisa (e apaga).
 //
 // A mesma trava de isolamento do global-setup (support/project-env.ts): se o
@@ -38,6 +40,10 @@ export default async function globalTeardown(config: FullConfig): Promise<void> 
         }
 
         await sweepMailpit(request);
+
+        for (const address of fixedPeople) {
+            await deleteMailpitMessagesTo(request, address);
+        }
     } finally {
         await request.dispose();
         await browser.close();
