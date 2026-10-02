@@ -231,11 +231,15 @@ final class AccountController implements HasMiddleware
     {
         $ordem = [AccountRole::Owner->value => 0, AccountRole::Admin->value => 1, AccountRole::Member->value => 2];
 
-        return $directory->members($account)
+        // O model de usuário configurado é este (App\Models\User): `ensure`
+        // confere na hora (falha fechada) e dá o tipo à análise estática.
+        return array_values($directory->members($account)
+            ->ensure(User::class)
             ->map(static function (User $pessoa) use ($viewer, $papel): array {
-                $role = AccountRole::from((string) $pessoa->pivot->getAttribute('role'));
+                $vinculo = $pessoa->getRelation('pivot');
+                $role = AccountRole::from((string) $vinculo->getAttribute('role'));
                 $self = $pessoa->is($viewer);
-                $joined = $pessoa->pivot->getAttribute('created_at');
+                $joined = $vinculo->getAttribute('created_at');
 
                 return [
                     'uuid' => (string) $pessoa->uuid,
@@ -252,8 +256,7 @@ final class AccountController implements HasMiddleware
                 ];
             })
             ->sortBy(static fn (array $m): string => $ordem[$m['role']].mb_strtolower($m['name']))
-            ->values()
-            ->all();
+            ->all());
     }
 
     /**
@@ -263,7 +266,7 @@ final class AccountController implements HasMiddleware
      */
     private function invitations(AccountDirectory $directory): array
     {
-        return $directory->openInvitations()
+        return array_values($directory->openInvitations()
             ->map(static function (AccountInvitation $invitation): array {
                 $status = $invitation->status();
 
@@ -279,8 +282,7 @@ final class AccountController implements HasMiddleware
                     'invitedBy' => $invitation->creator?->getAttribute('name'),
                 ];
             })
-            ->values()
-            ->all();
+            ->all());
     }
 
     private function user(Request $request): User

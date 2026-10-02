@@ -116,6 +116,7 @@ servidor do Vite (e o WebSocket do HMR) — e nada além disso, nunca
 docker compose exec react-app ./vendor/bin/pest
 docker compose exec react-app ./vendor/bin/pest -c phpunit.pgsql.xml
 docker compose exec react-app ./vendor/bin/pint
+docker compose exec react-app ./vendor/bin/phpstan analyse --memory-limit=2G   # Larastan nível 8
 
 # Front: tipos, lint/formatação (Vite+ do kit oficial: oxlint + oxfmt) e build
 docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -w /app node:24-slim npm run types:check

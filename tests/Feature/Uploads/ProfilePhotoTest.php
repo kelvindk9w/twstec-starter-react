@@ -29,6 +29,10 @@ it('o perfil oferece a foto só com o pacote de uploads', function () {
 })->group('uploads');
 
 it('envia uma imagem legítima: foto pessoal da pessoa, por URL assinada nas props', function () {
+    // A URL assinada leva a expiração em segundos e é gerada DUAS vezes (nas
+    // props e aqui, para comparar): com o relógio andando, a virada do
+    // segundo entre as duas a tornaria diferente. Relógio parado.
+    $this->freezeSecond();
     $user = User::factory()->create();
 
     $this->actingAs($user)->withHeaders(inertiaHeaders())

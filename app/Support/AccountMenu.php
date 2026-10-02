@@ -36,7 +36,7 @@ final class AccountMenu
 
         $atual = Accounts::current();
 
-        $contas = app(AccountDirectory::class)->accountsOf($user)
+        $contas = array_values(app(AccountDirectory::class)->accountsOf($user)
             ->sortBy(fn (AccountMembership $m): string => ($m->account->isPersonal() ? '0' : '1').mb_strtolower($m->account->displayName()))
             ->map(fn (AccountMembership $m): array => [
                 'uuid' => (string) $m->account->uuid,
@@ -48,10 +48,17 @@ final class AccountMenu
                 'personal' => $m->account->isPersonal(),
                 'current' => $atual !== null && $atual->is($m->account),
             ])
-            ->values()
-            ->all();
+            ->all());
 
-        $corrente = collect($contas)->firstWhere('current', true);
+        $corrente = null;
+
+        foreach ($contas as $conta) {
+            if ($conta['current']) {
+                $corrente = $conta;
+
+                break;
+            }
+        }
 
         if ($corrente === null) {
             return null;
@@ -63,7 +70,7 @@ final class AccountMenu
                 'name' => $corrente['name'],
                 'role' => $corrente['role'],
                 // Como no Livewire: na conta pessoal, o selo diz "Conta pessoal".
-                'roleLabel' => $corrente['personal'] ? __('accounts.personal_account') : $corrente['roleLabel'],
+                'roleLabel' => $corrente['personal'] ? (string) __('accounts.personal_account') : $corrente['roleLabel'],
                 'personal' => $corrente['personal'],
             ],
             'accounts' => $contas,

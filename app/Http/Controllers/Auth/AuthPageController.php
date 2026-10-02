@@ -86,7 +86,7 @@ final class AuthPageController
         }
 
         return Inertia::render('auth/two-factor-challenge', [
-            'email' => $user->email,
+            'email' => $user->getEmailForVerification(),
             'codeTtlMinutes' => $twoFactor->codeTtlMinutes(),
         ]);
     }
@@ -105,7 +105,7 @@ final class AuthPageController
                 ->toResponse($request, new EmailVerificationResult(EmailVerificationOutcome::NotPending));
         }
 
-        return Inertia::render('auth/verify-email', ['email' => $user->email]);
+        return Inertia::render('auth/verify-email', ['email' => $user->getEmailForVerification()]);
     }
 
     public function transactionPassword(): InertiaResponse
@@ -134,7 +134,7 @@ final class AuthPageController
         $graceEndsAt = $requirement->graceEndsAt($user);
 
         return Inertia::render('auth/two-factor-setup', [
-            'email' => $user->email,
+            'email' => $user->getEmailForVerification(),
             'hasTransactionPassword' => $user->hasTransactionPassword(),
             'codeSent' => $user->hasTransactionPassword() && TwoFactorSetupController::codeSent($request),
             'codeTtlMinutes' => $twoFactor->codeTtlMinutes(),

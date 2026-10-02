@@ -12,19 +12,19 @@ it('mostra o catálogo com os rótulos traduzidos', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('settings/notifications')
             ->has('preferences', count(config('notifications.preferences')))
-            ->where('preferences.0.label', __('panel.notifications.pref_payment_confirmed')));
+            ->where('preferences.0.label', __('panel.notifications.pref_order_confirmed')));
 });
 
 it('grava as escolhas e mantém o alerta de segurança sempre ligado', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)->from('/notifications')->put('/notifications', [
-        'preferences' => ['payment_confirmed' => '1', 'security_alerts' => '0'],
+        'preferences' => ['order_confirmed' => '1', 'security_alerts' => '0'],
     ])->assertRedirect('/notifications')->assertSessionHas('status', __('panel.notifications.saved'));
 
     $user->refresh();
 
-    expect($user->notificationPreference('payment_confirmed'))->toBeTrue()
+    expect($user->notificationPreference('order_confirmed'))->toBeTrue()
         ->and($user->notificationPreference('final_customer_receipt'))->toBeFalse()
         ->and($user->notificationPreference('api_key_events'))->toBeFalse()
         ->and($user->notificationPreference('security_alerts'))->toBeTrue();
