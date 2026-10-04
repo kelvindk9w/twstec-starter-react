@@ -13,7 +13,8 @@ namespace App\Support;
  * foundation), então a tela e a mensagem do servidor falam igual. Tradução
  * não é segredo, mas nem tudo precisa ir: e-mails (`mail`), validação
  * (`validation` — a mensagem de erro já chega pronta do servidor) e senhas
- * (`passwords`) ficam no servidor.
+ * (`passwords`) ficam no servidor. `webhooks` é o grupo do pacote
+ * twstec/kit-webhooks (as telas de webhooks); sem o módulo, vai vazio.
  *
  * No front: resources/js/lib/i18n.ts (`t('auth.ui.login_title')`, com as
  * substituições `:nome` no mesmo formato do Laravel).
@@ -23,7 +24,7 @@ final class FrontTranslations
     /**
      * @var list<string>
      */
-    public const GROUPS = ['auth', 'landing', 'panel', 'ui'];
+    public const GROUPS = ['auth', 'landing', 'panel', 'ui', 'webhooks'];
 
     /**
      * @return array<string, mixed>

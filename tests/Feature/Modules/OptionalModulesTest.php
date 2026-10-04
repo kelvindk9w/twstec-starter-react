@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Support\FrontRoutes;
+use App\Support\Navigation;
 use Illuminate\Routing\Router;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -18,7 +19,7 @@ it('as props dizem quais módulos opcionais estão instalados', function () {
 });
 
 it('módulo ausente aparece como ausente para o front', function () {
-    Kit::pretendAbsent('accounts', 'uploads');
+    Kit::pretendAbsent('accounts', 'uploads', 'webhooks');
 
     $this->get('/login')->assertInertia(fn (Assert $page) => $page
         ->where('kit.modules.accounts', false)
@@ -26,7 +27,7 @@ it('módulo ausente aparece como ausente para o front', function () {
 });
 
 it('sem contas, o menu não tem nenhuma tela de conta', function () {
-    Kit::pretendAbsent('accounts', 'uploads');
+    Kit::pretendAbsent('accounts', 'uploads', 'webhooks');
 
     $this->actingAs(User::factory()->create())->get('/dashboard')
         ->assertInertia(fn (Assert $page) => $page->where('navigation', fn ($groups) => collect($groups)
@@ -65,6 +66,10 @@ function rotasDeModuloReact(): array
             || str_starts_with($nome, 'panel.account') || str_starts_with($nome, 'accounts.')
             || str_starts_with($nome, 'invitations.')) {
             $rotas[$nome] = 'accounts';
+        }
+
+        if (str_starts_with($nome, 'panel.webhooks')) {
+            $rotas[$nome] = 'webhooks';
         }
     }
 
@@ -108,7 +113,7 @@ it('cada tela de módulo opcional existe só com o módulo instalado — e entra
 });
 
 it('sem os módulos, o routes/web.php não registra as telas de contas nem a foto — e registra as da base', function () {
-    Kit::pretendAbsent('accounts', 'uploads');
+    Kit::pretendAbsent('accounts', 'uploads', 'webhooks');
 
     $rotas = rotasDoArquivoWebReact();
 
@@ -118,6 +123,22 @@ it('sem os módulos, o routes/web.php não registra as telas de contas nem a fot
 
     expect($rotas)->toContain('dashboard', 'panel.profile', 'panel.notifications', 'transaction-password.edit', 'login', 'register', 'logout');
 });
+
+it('sem webhooks (com contas), só a tela de webhooks sai — rota, mapa do front e menu', function () {
+    Kit::pretendAbsent('webhooks');
+
+    $rotas = rotasDoArquivoWebReact();
+
+    expect($rotas)->not->toContain('panel.webhooks')->not->toContain('panel.webhooks.store')
+        ->and($rotas)->toContain('panel.api-keys', 'panel.projects')
+        ->and(json_encode(Navigation::panel(request()), JSON_UNESCAPED_SLASHES))->not->toContain('/webhooks');
+})->group('accounts');
+
+it('com webhooks, a tela entra na rota, no mapa e no menu', function () {
+    expect(Route::has('panel.webhooks'))->toBeTrue()
+        ->and(FrontRoutes::all())->toHaveKey('panel.webhooks')
+        ->and(json_encode(Navigation::panel(request()), JSON_UNESCAPED_SLASHES))->toContain('/webhooks');
+})->group('accounts', 'webhooks');
 
 it('sem uploads (com contas), só a foto sai', function () {
     Kit::pretendAbsent('uploads');

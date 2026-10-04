@@ -2,7 +2,7 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "twstec/starter-react",
     "type": "project",
-    "description": "TWS Laravel Starter Kit — starter React: aplicativo Laravel 13 com painel do usuário em React 19 + Inertia 3 + TypeScript + Tailwind 4 + shadcn/ui (a partir do kit oficial do Laravel), com a autenticação, a segurança e a auditoria dos pacotes twstec/kit-*. Contas e API, uploads e o painel /admin são opcionais: escolha com `php artisan tws:install`.",
+    "description": "TWS Laravel Starter Kit — starter React: aplicativo Laravel 13 com painel do usuário em React 19 + Inertia 3 + TypeScript + Tailwind 4 + shadcn/ui (a partir do kit oficial do Laravel), com a autenticação, a segurança e a auditoria dos pacotes twstec/kit-*. Contas e API, uploads, o painel /admin e os webhooks são opcionais: escolha com `php artisan tws:install`.",
     "keywords": [
         "laravel",
         "react",
@@ -29,7 +29,8 @@
         "twstec/kit-admin": "^2.0@beta",
         "twstec/kit-auth": "^2.0@beta",
         "twstec/kit-foundation": "^2.0@beta",
-        "twstec/kit-uploads": "^2.0@beta"
+        "twstec/kit-uploads": "^2.0@beta",
+        "twstec/kit-webhooks": "^2.0@beta"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",

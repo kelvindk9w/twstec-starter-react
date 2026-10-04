@@ -38,7 +38,7 @@ export type NavGroup = {
     items: NavItem[];
 };
 
-export type OptionalModule = 'accounts' | 'uploads' | 'admin';
+export type OptionalModule = 'accounts' | 'uploads' | 'admin' | 'webhooks';
 
 /** Papel fixo de uma pessoa numa conta (twstec/kit-accounts). */
 export type AccountRole = 'owner' | 'admin' | 'member';
@@ -119,6 +119,11 @@ export type AppVariant = 'header' | 'sidebar';
 export type FlashData = {
     revealedKey?: {
         publicKey: string;
+        secret: string;
+    };
+    /** O segredo de assinatura de um endpoint de webhook (criação, revelação ou rotação). */
+    revealedWebhookSecret?: {
+        name: string;
         secret: string;
     };
 };

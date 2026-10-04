@@ -185,8 +185,8 @@ props de todas as telas atrás de senha, hash, token, código e pepper
 
 ## Módulos opcionais e demonstração
 
-Como no Livewire: `foundation` e `auth` sempre; `accounts`, `uploads` e
-`admin` opcionais (`php artisan tws:install`). O front recebe os módulos
+Como no Livewire: `foundation` e `auth` sempre; `accounts`, `uploads`,
+`admin` e `webhooks` opcionais (`php artisan tws:install`). O front recebe os módulos
 instalados em `kit.modules`, e o menu só mostra tela que existe. O `/admin` é
 o mesmo plugin Filament do Livewire (tema em `resources/css/filament.css`,
 só no build com o painel instalado). O starter React **não usa a

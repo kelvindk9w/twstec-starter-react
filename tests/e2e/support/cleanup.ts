@@ -18,6 +18,25 @@ import { adminReady } from './flows';
 // =============================================================================
 
 /**
+ * Abre uma tela do /admin; se a borda responder 429 (a suíte inteira divide o
+ * limite por minuto do mesmo IP, e a limpeza costuma cair no fim da rodada),
+ * espera o que o `Retry-After` pede e tenta de novo. A limpeza continua
+ * conferindo tudo: só não desiste por causa do limite.
+ */
+async function gotoAdmin(admin: Page, url: string): Promise<void> {
+    for (let tentativa = 0; tentativa < 4; tentativa++) {
+        const response = await admin.goto(url);
+
+        if (response?.status() !== 429) {
+            return;
+        }
+
+        const espera = Number(response.headers()['retry-after'] ?? 10);
+        await admin.waitForTimeout((Number.isFinite(espera) ? espera + 1 : 11) * 1_000);
+    }
+}
+
+/**
  * Exclui as pessoas `addresses`, na ordem que a regra do dono permitir: a
  * dona de conta com outros membros não sai (o /admin recusa); a exclusão de
  * outra pode liberá-la, então cada rodada tenta de novo as recusadas. No
@@ -53,7 +72,7 @@ async function tryDelete(admin: Page, address: string): Promise<'absent' | 'dele
     const row = admin.getByRole('row').filter({ hasText: address });
     const empty = admin.locator('.fi-ta-empty-state');
 
-    await admin.goto(search);
+    await gotoAdmin(admin, search);
     await adminReady(admin);
     await expect(row.or(empty), `limpeza E2E: a busca por ${address} no /admin não terminou`).toBeVisible({ timeout: 15_000 });
 
@@ -77,7 +96,7 @@ async function tryDelete(admin: Page, address: string): Promise<'absent' | 'dele
     }
 
     // Prova no servidor: a mesma busca, recarregada, volta vazia.
-    await admin.goto(search);
+    await gotoAdmin(admin, search);
     await adminReady(admin);
     await expect(row.or(empty)).toBeVisible({ timeout: 15_000 });
 
@@ -97,7 +116,7 @@ export async function sweepLeftovers(browser: Browser, baseURL?: string): Promis
     let found: string[] = [];
 
     try {
-        await admin.goto('/admin/users?search=e2e-');
+        await gotoAdmin(admin, '/admin/users?search=e2e-');
         await adminReady(admin);
         await expect(admin.getByRole('row').nth(1).or(admin.locator('.fi-ta-empty-state'))).toBeVisible({ timeout: 15_000 });
 

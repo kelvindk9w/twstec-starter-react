@@ -99,7 +99,7 @@ final class ApiKeysController implements HasMiddleware
 
         $result = $apiKeys->create($this->user($request), [
             'name' => $validated['name'],
-            'scopes' => $request->boolean('all_scopes', true) ? null : array_values($validated['scopes'] ?? []),
+            'scopes' => $request->boolean('all_scopes') ? null : array_values($validated['scopes'] ?? []),
             'expires_at' => ($validated['expires_at'] ?? null) !== null
                 ? Carbon::parse($validated['expires_at'])->toDateTimeString()
                 : null,
@@ -271,7 +271,10 @@ final class ApiKeysController implements HasMiddleware
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
             'expires_at' => ['nullable', 'date', 'after:now'],
-            'all_scopes' => ['boolean'],
+            // "Todas as permissões" é uma ESCOLHA explícita do formulário: sem
+            // o campo (pedido vazio ou malformado), a chave não nasce com
+            // `*:*` por omissão — o pedido é recusado.
+            'all_scopes' => ['required', 'boolean'],
             'scopes' => ['array'],
             'scopes.*' => ['string', 'regex:'.StoreApiKeyRequest::SCOPE_REGEX],
             'project_uuids' => ['array'],
@@ -283,7 +286,7 @@ final class ApiKeysController implements HasMiddleware
             'expires_at' => __('panel.api_keys.expires_at'),
         ]);
 
-        if (! $request->boolean('all_scopes', true) && ($validated['scopes'] ?? []) === []) {
+        if (! $request->boolean('all_scopes') && ($validated['scopes'] ?? []) === []) {
             throw ValidationException::withMessages(['scopes' => __('api_keys.scopes.invalid_format')]);
         }
 

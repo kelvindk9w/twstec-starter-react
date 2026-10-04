@@ -50,7 +50,8 @@ it('o menu lateral tem a arquitetura do Livewire, só com as telas que existem',
             // projetos) e a página da conta — na ordem do Livewire.
             if ($accounts) {
                 $page->where('navigation.1.label', __('panel.nav.groups.development'))
-                    ->where('navigation.1.items', fn ($items) => collect($items)->pluck('href')->all() === ['/api-keys', '/projects'])
+                    // E os webhooks, com o módulo deles (que exige contas).
+                    ->where('navigation.1.items', fn ($items) => collect($items)->pluck('href')->all() === ['/api-keys', '/projects', ...(Kit::has('webhooks') ? ['/webhooks'] : [])])
                     ->where('navigation.2.label', __('panel.nav.groups.account'))
                     ->where('navigation.2.items', fn ($items) => collect($items)->pluck('href')->all() === [
                         '/account', '/notifications', '/profile', '/settings/transaction-password',

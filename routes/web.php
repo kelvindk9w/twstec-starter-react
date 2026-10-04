@@ -17,6 +17,7 @@ use App\Http\Controllers\Panel\ProfileController;
 use App\Http\Controllers\Panel\ProfilePhotoController;
 use App\Http\Controllers\Panel\ProjectsController;
 use App\Http\Controllers\Panel\TwoFactorPreferenceController;
+use App\Http\Controllers\Panel\WebhooksController;
 use App\Http\Controllers\ThemePreferenceController;
 use Illuminate\Support\Facades\Route;
 use Twstec\Kit\Accounts\Account\Http\Controllers\AccountSwitchController;
@@ -233,6 +234,26 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         Route::get('accounts/{account}/open/{to}', OpenAccountController::class)
             ->middleware('signed:relative')
             ->name('accounts.open');
+    }
+
+    // Webhooks de saída da conta atual (twstec/kit-webhooks, que exige o de
+    // contas): endpoints, log de entregas e reenvio na mesma tela. Criar,
+    // editar, revelar e rotacionar o segredo são ações sensíveis (`…/code`
+    // confere e manda o código; o envio da ação traz o código). As regras são
+    // das Actions do pacote.
+    if (Kit::has('webhooks')) {
+        Route::get('webhooks', [WebhooksController::class, 'index'])->name('panel.webhooks');
+        Route::post('webhooks/code', [WebhooksController::class, 'code'])->name('panel.webhooks.code');
+        Route::post('webhooks', [WebhooksController::class, 'store'])->name('panel.webhooks.store');
+        Route::post('webhooks/{endpoint}/code', [WebhooksController::class, 'updateCode'])->name('panel.webhooks.update.code');
+        Route::put('webhooks/{endpoint}', [WebhooksController::class, 'update'])->name('panel.webhooks.update');
+        Route::delete('webhooks/{endpoint}', [WebhooksController::class, 'destroy'])->name('panel.webhooks.destroy');
+        Route::post('webhooks/{endpoint}/status', [WebhooksController::class, 'status'])->name('panel.webhooks.status');
+        Route::post('webhooks/{endpoint}/test', [WebhooksController::class, 'test'])->name('panel.webhooks.test');
+        Route::post('webhooks/{endpoint}/secret/code', [WebhooksController::class, 'secretCode'])->name('panel.webhooks.secret.code');
+        Route::post('webhooks/{endpoint}/reveal', [WebhooksController::class, 'reveal'])->name('panel.webhooks.reveal');
+        Route::post('webhooks/{endpoint}/rotate', [WebhooksController::class, 'rotate'])->name('panel.webhooks.rotate');
+        Route::post('webhooks/deliveries/{delivery}/resend', [WebhooksController::class, 'resend'])->name('panel.webhooks.resend');
     }
 
     // Foto de perfil: a função global de upload seguro do kit, só imagem.

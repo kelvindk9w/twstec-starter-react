@@ -133,6 +133,20 @@ it('escopos granulares: com "todas" desligado, exige a seleção e grava só os 
     expect(comoSistema(fn () => ApiKey::query()->sole()->scopes))->toBe(['projects:read']);
 })->group('accounts');
 
+it('"todas as permissões" é escolha explícita: pedido sem o campo é recusado — a chave nunca nasce com *:* por omissão', function () {
+    $dono = User::factory()->withTransactionPassword()->create();
+    entrarNa($dono, contaPessoal($dono));
+
+    $semEscolha = dadosDaChave();
+    unset($semEscolha['all_scopes']);
+
+    $this->post('/api-keys/code', [...$semEscolha, 'stage' => 'check'])->assertSessionHasErrors('all_scopes');
+    $this->post('/api-keys', [...$semEscolha, 'code' => '123456'])->assertSessionHasErrors('all_scopes');
+
+    expect(comoSistema(fn () => ApiKey::query()->count()))->toBe(0);
+    Mail::assertNothingQueued();
+})->group('accounts');
+
 it('sem senha de transação definida, a tela avisa e nada é enviado', function () {
     $dono = User::factory()->create();
     entrarNa($dono, contaPessoal($dono));

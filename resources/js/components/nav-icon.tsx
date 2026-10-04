@@ -7,6 +7,7 @@ import {
     LayoutGrid,
     Lock,
     Users,
+    Webhook,
 } from 'lucide-react';
 
 /**
@@ -21,6 +22,7 @@ const icons: Record<string, LucideIcon> = {
     'layout-grid': LayoutGrid,
     lock: Lock,
     users: Users,
+    webhook: Webhook,
 };
 
 export function NavIcon({ name }: { name: string }) {

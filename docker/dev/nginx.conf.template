@@ -40,6 +40,12 @@ server {
     # esquecido no public/ não chega ao php-fpm.
     location ~ ^/index\.php(/|$) {
         fastcgi_pass app:9000;
+        # Os cabeçalhos da resposta (o Link de pré-carregamento do Vite, a CSP,
+        # os cookies) passam de 4 KB numa tela com muitos módulos (a de
+        # webhooks): com o buffer padrão, o nginx respondia 502 ("upstream
+        # sent too big header").
+        fastcgi_buffer_size 32k;
+        fastcgi_buffers 8 32k;
         fastcgi_split_path_info ^(.+\.php)(/.*)$;
         fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
         fastcgi_param PATH_INFO $fastcgi_path_info;

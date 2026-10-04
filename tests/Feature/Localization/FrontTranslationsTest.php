@@ -6,6 +6,7 @@ use App\Support\FrontRoutes;
 use App\Support\FrontTranslations;
 use Illuminate\Support\Facades\File;
 use Inertia\Testing\AssertableInertia as Assert;
+use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
 
 // i18n do front: as páginas React usam os arquivos de tradução do Laravel,
@@ -30,6 +31,12 @@ function frontTranslationKeys(): array
     // Chaves montadas em tempo de execução (t(`ui.theme.${value}`)).
     foreach (['system', 'light', 'dark'] as $theme) {
         $keys[] = "ui.theme.{$theme}";
+    }
+
+    // Os textos da tela de webhooks são do pacote twstec/kit-webhooks
+    // (opcional): sem ele, a tela não existe e as chaves não contam.
+    if (! Kit::has('webhooks')) {
+        $keys = array_filter($keys, fn (string $key): bool => ! str_starts_with($key, 'webhooks.'));
     }
 
     // Nomes de rota (`panel.profile`) têm a mesma forma de uma chave: ficam
