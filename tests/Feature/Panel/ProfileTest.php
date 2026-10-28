@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Inertia\Testing\AssertableInertia as Assert;
 use Twstec\Kit\Auth\PasswordPolicy;
+use Twstec\Kit\Auth\Support\SessionFingerprint;
 
 // Perfil: os mesmos blocos, regras e mensagens do starter Livewire.
 
@@ -60,6 +61,33 @@ it('troca a senha de login exigindo a atual', function () {
     ])->assertSessionHasNoErrors()->assertSessionHas('status', __('panel.profile.password_updated'));
 
     expect(Hash::check('NovaSenha123', $user->fresh()->password))->toBeTrue();
+});
+
+it('trocar a senha mantém esta sessão e derruba a de outro aparelho e o "lembrar de mim"', function () {
+    $user = User::factory()->create(['password' => 'SenhaAtual123']);
+
+    $this->post('/login', ['email' => $user->email, 'password' => 'SenhaAtual123'])->assertRedirect();
+    $this->get('/dashboard')->assertOk();
+    // O que uma sessão aberta em outro aparelho guarda (mesma senha de antes).
+    $outroAparelho = session(SessionFingerprint::SESSION_KEY);
+    $lembrarDeMim = $user->fresh()->getRememberToken();
+
+    $this->from('/profile')->put('/profile/password', [
+        'current_password' => 'SenhaAtual123',
+        'password' => 'NovaSenha123',
+        'password_confirmation' => 'NovaSenha123',
+    ])->assertSessionHasNoErrors();
+
+    $this->get('/dashboard')->assertOk();
+    $this->assertAuthenticatedAs($user);
+    expect($user->fresh()->getRememberToken())->not->toBe($lembrarDeMim)->not->toBeEmpty();
+
+    session()->put(SessionFingerprint::SESSION_KEY, $outroAparelho);
+
+    $this->get('/dashboard')
+        ->assertRedirect(route('login'))
+        ->assertSessionHasErrors(['email' => __('auth.session_ended')]);
+    $this->assertGuest();
 });
 
 it('a confirmação diferente usa os rótulos do Livewire na mensagem', function () {

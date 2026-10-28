@@ -63,8 +63,8 @@ com o mesmo PostgreSQL, Redis e Mailpit, mas **banco próprio**
 próprio. Da raiz do repositório:
 
 ```bash
+scripts/preparar-dev   # uma vez por clone: .env dos starters e senhas no .env da raiz
 cd starters/react
-cp .env.example .env
 
 # Dependências PHP (monta a pasta dos pacotes: path repository ../../packages)
 docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/var/www/html \

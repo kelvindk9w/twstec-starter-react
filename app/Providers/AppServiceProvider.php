@@ -12,6 +12,7 @@ use App\Http\Responses\Inertia\LogoutResponse;
 use App\Http\Responses\Inertia\PasswordResetLinkSentResponse;
 use App\Http\Responses\Inertia\PasswordResetResponse;
 use App\Http\Responses\Inertia\RegisterResponse;
+use App\Http\Responses\Inertia\SessionEndedResponse;
 use App\Http\Responses\Inertia\TwoFactorChallengeResponse;
 use App\Http\Responses\Inertia\TwoFactorLoginResponse;
 use App\Http\Responses\Inertia\TwoFactorRequiredResponse;
@@ -48,6 +49,7 @@ class AppServiceProvider extends ServiceProvider
         Responses\VerifyEmailResponse::class => VerifyEmailResponse::class,
         Responses\EmailVerificationResponse::class => EmailVerificationResponse::class,
         Responses\TwoFactorSetupResponse::class => TwoFactorSetupResponse::class,
+        Responses\SessionEndedResponse::class => SessionEndedResponse::class,
     ];
 
     /**

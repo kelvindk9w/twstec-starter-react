@@ -6,16 +6,18 @@ use App\Http\Responses\Inertia;
 use App\Models\User;
 use App\Providers\AppServiceProvider;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Twstec\Kit\Auth\Contracts\Responses;
 use Twstec\Kit\Auth\Enums\VerificationPurpose;
+use Twstec\Kit\Auth\Support\SessionFingerprint;
 
 // As respostas dos fluxos de autenticação são as implementações INERTIA do
 // starter, registradas no container sobre as padrão do pacote (que usa
 // bindIf). A regra continua no pacote; o destino que veio do cliente
 // continua passando pelo SafeRedirect.
 
-it('registra a versão Inertia de cada um dos 11 contratos de resposta', function (string $contract, string $implementation) {
+it('registra a versão Inertia de cada contrato de resposta', function (string $contract, string $implementation) {
     expect(app($contract))->toBeInstanceOf($implementation);
 })->with([
     [Responses\LoginResponse::class, Inertia\LoginResponse::class],
@@ -29,7 +31,29 @@ it('registra a versão Inertia de cada um dos 11 contratos de resposta', functio
     [Responses\FailedPasswordResetResponse::class, Inertia\FailedPasswordResetResponse::class],
     [Responses\VerifyEmailResponse::class, Inertia\VerifyEmailResponse::class],
     [Responses\EmailVerificationResponse::class, Inertia\EmailVerificationResponse::class],
+    [Responses\TwoFactorSetupResponse::class, Inertia\TwoFactorSetupResponse::class],
 ]);
+
+it('sessão encerrada (senha/segundo fator mudou em outro aparelho): visita Inertia recarrega o login com o aviso', function () {
+    // Sem o /admin, a resposta é a do starter; com ele, o pacote a decora
+    // (só manda ao login do painel quem estava no painel).
+    $user = User::factory()->create(['password' => 'SenhaAtual123']);
+
+    $this->actingAs($user)->get('/dashboard')->assertOk();
+    $outroAparelho = session(SessionFingerprint::SESSION_KEY);
+
+    // A senha muda em OUTRO lugar: esta sessão não acompanha.
+    Auth::guard('web')->setUser(User::factory()->create());
+    $user->forceFill(['password' => 'NovaSenha123'])->save();
+    Auth::guard('web')->setUser($user->fresh());
+    session()->put(SessionFingerprint::SESSION_KEY, $outroAparelho);
+
+    $this->withHeaders(inertiaHeaders())->get('/dashboard')
+        ->assertStatus(409)
+        ->assertHeader('X-Inertia-Location', route('login'))
+        ->assertSessionHasErrors(['email' => __('auth.session_ended')]);
+    $this->assertGuest();
+});
 
 it('a lista do provider cobre todos os contratos do pacote', function () {
     $contracts = collect(glob(base_path('vendor/twstec/kit-auth/src/Contracts/Responses/*.php')))

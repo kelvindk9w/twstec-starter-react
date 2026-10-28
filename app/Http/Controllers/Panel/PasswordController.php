@@ -9,15 +9,20 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Twstec\Kit\Auth\PasswordPolicy;
+use Twstec\Kit\Auth\Services\PasswordConfirmation;
 
 /**
  * Troca da senha de LOGIN no perfil: exige a senha atual e aplica a mesma
  * política do cadastro (PasswordPolicy) — as regras, os rótulos e as
  * mensagens do starter Livewire (Profile::updatePassword). Senha errada é
- * tentativa de adivinhação: o envio passa pelo `throttle:sensitive`.
+ * tentativa de adivinhação: o envio passa pelo `throttle:sensitive`, e as
+ * erradas contam no limite por conta do pacote (PasswordConfirmation).
+ *
+ * Trocar a senha encerra as OUTRAS sessões da conta e invalida os cookies
+ * "lembrar de mim" — regra do model (twstec/kit-auth, EndsOtherSessions);
+ * esta sessão continua aberta.
  */
 final class PasswordController implements HasMiddleware
 {
@@ -32,7 +37,7 @@ final class PasswordController implements HasMiddleware
     /**
      * @throws ValidationException
      */
-    public function update(Request $request): RedirectResponse
+    public function update(Request $request, PasswordConfirmation $passwords): RedirectResponse
     {
         $validated = $request->validate([
             'current_password' => ['required', 'string'],
@@ -47,7 +52,7 @@ final class PasswordController implements HasMiddleware
         /** @var User $user */
         $user = $request->user();
 
-        if (! Hash::check($validated['current_password'], (string) $user->password)) {
+        if (! $passwords->confirmLoginPassword($user, $validated['current_password'], 'current_password')) {
             throw ValidationException::withMessages([
                 'current_password' => __('panel.profile.current_password_invalid'),
             ]);
