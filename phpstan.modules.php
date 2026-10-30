@@ -21,7 +21,16 @@ declare(strict_types=1);
 // Com todos os módulos instalados, nada é excluído nem ignorado. Arquivo novo
 // que cite um módulo opcional entra no mapa abaixo — senão a análise de um
 // projeto sem o módulo reprova, e é assim que se descobre.
+//
+// EXTENSÕES DOS PACOTES: cada pacote do kit traz um extension.neon que mostra
+// ao Larastan as colunas e os casts dos models dele (as migrations ficam no
+// vendor/). Aqui entra a de cada pacote INSTALADO — a de um módulo ausente
+// não existe, e um include fixo no phpstan.neon.dist quebraria a análise.
+// Não inclua de novo, à mão, uma extensão de vendor/twstec/kit-*: o PHPStan
+// recusa arquivo incluído duas vezes.
 // =============================================================================
+
+$includes = glob(__DIR__.'/vendor/twstec/kit-*/extension.neon') ?: [];
 
 $modules = [
     'webhooks' => [
@@ -45,6 +54,7 @@ $modules = [
         ],
         'mixed' => [
             'app/Providers/HorizonServiceProvider.php',
+            'config/dashboards.php',
         ],
     ],
     'accounts' => [
@@ -66,6 +76,8 @@ $modules = [
         'mixed' => [
             'app/Providers/AppServiceProvider.php',
             'app/Http/Controllers/Panel/DashboardController.php',
+            'database/seeders/DatabaseSeeder.php',
+            'routes/web.php',
         ],
     ],
 ];
@@ -100,6 +112,7 @@ foreach ($modules as $module => $map) {
 }
 
 return [
+    'includes' => $includes,
     'parameters' => [
         'excludePaths' => ['analyse' => $exclude],
         'ignoreErrors' => $ignore,

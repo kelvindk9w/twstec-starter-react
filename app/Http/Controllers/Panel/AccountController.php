@@ -10,7 +10,6 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -235,11 +234,10 @@ final class AccountController implements HasMiddleware
         // confere na hora (falha fechada) e dá o tipo à análise estática.
         return array_values($directory->members($account)
             ->ensure(User::class)
-            ->map(static function (User $pessoa) use ($viewer, $papel): array {
-                $vinculo = $pessoa->getRelation('pivot');
-                $role = AccountRole::from((string) $vinculo->getAttribute('role'));
+            ->map(static function (User $pessoa) use ($directory, $viewer, $papel): array {
+                $role = $directory->roleOf($pessoa);
                 $self = $pessoa->is($viewer);
-                $joined = $vinculo->getAttribute('created_at');
+                $joined = $directory->memberSince($pessoa);
 
                 return [
                     'uuid' => (string) $pessoa->uuid,
@@ -249,7 +247,7 @@ final class AccountController implements HasMiddleware
                     'role' => $role->value,
                     'roleLabel' => $role->label(),
                     'self' => $self,
-                    'joined' => $joined === null ? null : Carbon::parse($joined)->translatedFormat('d M Y'),
+                    'joined' => $joined?->translatedFormat('d M Y'),
                     'canPromote' => MemberRules::canChangeRole($papel, $role, AccountRole::Admin, $self),
                     'canDemote' => MemberRules::canChangeRole($papel, $role, AccountRole::Member, $self),
                     'canRemove' => MemberRules::canRemove($papel, $role, $self),
