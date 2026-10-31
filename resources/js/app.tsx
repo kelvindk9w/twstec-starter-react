@@ -11,7 +11,9 @@ import AuthLayout from '@/layouts/auth-layout';
 let appName = '';
 
 void createInertiaApp({
-    title: (title) => (title ? `${title} — ${appName}` : appName),
+    // Página cujo título é o próprio nome (a inicial) não vira "Nome — Nome".
+    title: (title) =>
+        title && title !== appName ? `${title} — ${appName}` : appName,
     layout: (name) => {
         switch (true) {
             case name === 'welcome':

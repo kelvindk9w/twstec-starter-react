@@ -29,8 +29,9 @@
             html.dark { background-color: oklch(0.145 0 0); }
         </style>
 
-        <link rel="icon" href="/favicon.ico" sizes="any">
-        <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+        {{-- Ícone da aba: PLATFORM_FAVICON_URL / PLATFORM_FAVICON_SVG_URL, o
+             logotipo ou a inicial do nome gerada (BrandMark) — nunca o do kit. --}}
+        {{ \Twstec\Kit\Foundation\Support\BrandMark::faviconLinks() }}
 
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])

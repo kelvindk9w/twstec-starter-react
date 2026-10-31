@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # =============================================================================
-# Dockerfile PHP-FPM — TWS Laravel Starter Kit, starter React
+# Dockerfile PHP-FPM do projeto (starter React)
 #
 # O mesmo desenho da imagem do starter Livewire: mesma base, mesmas extensões, dependências de produção
 # instaladas sobre o PHP da imagem final, pacotes do kit COPIADOS em vendor/,

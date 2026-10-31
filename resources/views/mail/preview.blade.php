@@ -19,6 +19,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
     <title>{{ __('mail.preview.title') }} · {{ platform()->name }}</title>
+    {{ \Twstec\Kit\Foundation\Support\BrandMark::faviconLinks() }}
     <style>
         :root { color-scheme: light dark; --bg: #fafafa; --card: #ffffff; --text: #171717; --muted: #737373; --line: #e5e5e5; --accent: #171717; --accent-text: #fafafa; }
         @media (prefers-color-scheme: dark) {
@@ -66,12 +67,14 @@
 
         <div style="min-width: 0">
             <div class="card bar">
+                @if (platform()->offersLocaleChoice())
                 <div>
                     <span class="muted">{{ __('mail.preview.language') }}</span>
                     @foreach (platform()->availableLocales as $locale)
                         <a class="pill" href="{{ route('mail.preview', ['slug' => $current, 'lang' => $locale, 'scheme' => $scheme]) }}" aria-current="{{ $locale === $previewLocale ? 'true' : 'false' }}">{{ __('mail.preview.locales.'.$locale) }}</a>
                     @endforeach
                 </div>
+                @endif
                 <div>
                     <span class="muted">{{ __('mail.preview.scheme') }}</span>
                     @foreach ($schemes as $option)
@@ -96,7 +99,7 @@
                 <pre>{{ $email['text'] }}</pre>
             </details>
 
-            <p class="muted">{{ __('mail.preview.mailpit_hint') }}</p>
+            <p class="muted">{{ filled(config('mail.preview.mailpit_url')) ? __('mail.preview.mailpit_hint', ['url' => (string) config('mail.preview.mailpit_url')]) : __('mail.preview.mailpit_hint_generic') }}</p>
         </div>
     </div>
 </main>

@@ -64,6 +64,7 @@ export type SharedProps = {
     app: {
         name: string;
         logoUrl: string | null;
+        initial: string;
         locale: string;
         locales: Locale[];
     };

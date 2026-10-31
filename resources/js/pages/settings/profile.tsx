@@ -111,39 +111,49 @@ export default function Profile({ passwordHint, photo, twoFactor }: Props) {
                                 </p>
                             </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="locale">
-                                    {t('panel.profile.locale_label')}
-                                </Label>
-                                <Select
-                                    name="locale"
-                                    defaultValue={user.locale}
-                                >
-                                    <SelectTrigger
-                                        id="locale"
-                                        aria-describedby="locale-hint"
+                            {/* Com um idioma só, não há o que escolher: o campo
+                                some e o formulário envia o único disponível. */}
+                            {app.locales.length > 1 ? (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="locale">
+                                        {t('panel.profile.locale_label')}
+                                    </Label>
+                                    <Select
+                                        name="locale"
+                                        defaultValue={user.locale}
                                     >
-                                        <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {app.locales.map((locale) => (
-                                            <SelectItem
-                                                key={locale.code}
-                                                value={locale.code}
-                                            >
-                                                {locale.label}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <p
-                                    id="locale-hint"
-                                    className="text-xs text-muted-foreground"
-                                >
-                                    {t('panel.profile.locale_hint')}
-                                </p>
-                                <InputError message={errors.locale} />
-                            </div>
+                                        <SelectTrigger
+                                            id="locale"
+                                            aria-describedby="locale-hint"
+                                        >
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {app.locales.map((locale) => (
+                                                <SelectItem
+                                                    key={locale.code}
+                                                    value={locale.code}
+                                                >
+                                                    {locale.label}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <p
+                                        id="locale-hint"
+                                        className="text-xs text-muted-foreground"
+                                    >
+                                        {t('panel.profile.locale_hint')}
+                                    </p>
+                                    <InputError message={errors.locale} />
+                                </div>
+                            ) : (
+                                <input
+                                    type="hidden"
+                                    name="locale"
+                                    value={app.locales[0]?.code ?? app.locale}
+                                />
+                            )}
 
                             <div>
                                 <Button

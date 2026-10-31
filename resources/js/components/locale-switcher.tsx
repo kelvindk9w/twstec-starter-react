@@ -13,11 +13,16 @@ import { useTrans } from '@/lib/i18n';
  * Seletor de idioma. Cada idioma é um link comum (carga COMPLETA): a rota
  * locale.switch grava o cookie (e a conta, se há sessão) e devolve à mesma
  * página, que volta inteira no idioma novo — inclusive as traduções do front.
+ * Com um idioma só, não renderiza nada (um seletor de uma opção é ruído).
  */
 export function LocaleSwitcher() {
     const { app } = usePage().props;
     const { t } = useTrans();
     const current = app.locales.find((locale) => locale.code === app.locale);
+
+    if (app.locales.length < 2) {
+        return null;
+    }
 
     return (
         <DropdownMenu>

@@ -4,7 +4,7 @@ import AppLogoIcon from '@/components/app-logo-icon';
 
 /**
  * Marca do painel: o logotipo do .env (PLATFORM_LOGO_URL) quando há um; sem
- * ele, a marca monocromática do kit. O nome é o da plataforma
+ * ele, a inicial do nome (AppLogoIcon). O nome é o da plataforma
  * (PLATFORM_NAME) — nada escrito no código.
  */
 export default function AppLogo() {

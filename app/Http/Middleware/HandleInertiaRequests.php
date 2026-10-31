@@ -64,6 +64,8 @@ class HandleInertiaRequests extends Middleware
             'app' => fn (): array => [
                 'name' => platform()->name,
                 'logoUrl' => platform()->logoUrl,
+                // A marca de reserva sem logotipo: a inicial do nome.
+                'initial' => platform()->initial(),
                 'locale' => $locale,
                 'locales' => array_map(static fn (string $code): array => [
                     'code' => $code,

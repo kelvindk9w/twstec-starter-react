@@ -2,12 +2,11 @@
 
 declare(strict_types=1);
 
-// Chaves do SITE do produto (cabeçalho, rodapé e página inicial): usadas por
-// <x-site-header>, <x-site-footer>, home.blade.php e
-// App\Livewire\Support\Navigation. O grupo se chama `landing` por história —
-// nasceu com a landing do kit — e o nome ficou para não quebrar quem já
-// sobrescreveu estas chaves. As strings da landing em si são da demonstração
-// do kit (twstec/kit-demo), que acrescenta as dela a este grupo.
+// Chaves do SITE do produto (cabeçalho, rodapé e página inicial): usadas pela
+// página inicial (resources/js/pages/welcome.tsx). O grupo se chama `landing`
+// por história — nasceu com a landing do kit — e o nome ficou para não quebrar
+// quem já sobrescreveu estas chaves; os textos são os mesmos do starter
+// Livewire.
 
 return [
 
@@ -17,7 +16,7 @@ return [
     ],
 
     'footer' => [
-        'tagline' => 'Starter kit Laravel para SaaS — base estrutural pronta para construir.',
+        'tagline' => 'Entre ou crie a sua conta para começar.',
         'links_heading' => 'Atalhos',
         'api_status' => 'Status da API',
         'rights' => '© :year :company — Todos os direitos reservados',
