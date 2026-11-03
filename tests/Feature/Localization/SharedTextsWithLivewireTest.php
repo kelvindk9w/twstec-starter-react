@@ -5,8 +5,9 @@ declare(strict_types=1);
 use Illuminate\Support\Arr;
 
 // =============================================================================
-// SÓ DO REPOSITÓRIO DO KIT (monorepo): os textos que as duas interfaces
-// dividem são OS MESMOS do starter Livewire, ao lado (starters/livewire) —
+// SÓ DO REPOSITÓRIO DO KIT (monorepo): os textos de projeto que as duas
+// interfaces dividem são OS MESMOS do starter Livewire, ao lado
+// (starters/livewire) — os do kit moram nos pacotes, um só para os dois —
 // mensagens e rótulos idênticos em conteúdo; o ui.php do React é o do Livewire
 // mais os textos próprios dele.
 //
@@ -32,4 +33,4 @@ it('os textos compartilhados são idênticos aos do starter Livewire (no monorep
     if ($file !== 'ui') {
         expect($react)->toBe($other);
     }
-})->with(['pt_BR', 'en', 'es'])->with(['auth', 'landing', 'mail', 'pagination', 'panel', 'passwords', 'ui', 'validation']);
+})->with(['pt_BR', 'en', 'es'])->with(['landing', 'mail', 'ui']);

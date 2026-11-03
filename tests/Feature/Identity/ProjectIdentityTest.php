@@ -66,7 +66,9 @@ it('a página de erro é do projeto', function (): void {
     expectProjectIdentity($this->get('/endereco-que-nao-existe')->assertNotFound()->getContent(), showsName: false);
 });
 
-it('os textos do site do produto não falam do kit, nos três idiomas', function (string $locale): void {
+it('os textos do site do produto não falam do kit, em cada idioma', function (string $locale): void {
+    requireLocales($locale);
+
     $texts = json_encode([require lang_path("{$locale}/landing.php"), require lang_path("{$locale}/mail.php")], JSON_UNESCAPED_UNICODE);
 
     expect(mb_strtolower((string) $texts))->not->toContain('starter kit')
@@ -93,7 +95,9 @@ it('a galeria de e-mails é do projeto e não aponta o Mailpit de outro lugar', 
     expect($this->get('/mail-preview')->getContent())->toContain('http://acme.localhost:8021');
 });
 
-it('cada e-mail, nos três idiomas, é do projeto', function (string $slug, string $locale): void {
+it('cada e-mail, em cada idioma, é do projeto', function (string $slug, string $locale): void {
+    requireLocales($locale);
+
     $email = MailPreview::render($slug, $locale);
 
     expectProjectIdentity($email['html']);

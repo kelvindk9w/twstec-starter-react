@@ -21,6 +21,8 @@ it('mostra o perfil com o estado do segundo fator e a dica da senha', function (
 });
 
 it('atualiza nome e idioma, com o aviso no idioma novo', function () {
+    requireLocales('en', 'es');
+
     $user = User::factory()->create(['name' => 'Antes', 'locale' => 'pt_BR']);
 
     $this->actingAs($user)->from('/profile')

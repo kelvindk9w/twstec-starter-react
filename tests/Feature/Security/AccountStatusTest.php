@@ -63,6 +63,8 @@ it('um envio de formulário do painel também é recusado', function () {
 });
 
 it('a mensagem sai no idioma da conta', function () {
+    requireLocales('en', 'es');
+
     $user = User::factory()->create(['locale' => 'en']);
 
     $this->actingAs($user)->get('/dashboard')->assertOk();

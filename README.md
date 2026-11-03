@@ -107,7 +107,7 @@ no PostgreSQL compartilhado, se faltarem, e sai — sem tocar no serviço
 **Servidor de desenvolvimento do Vite** (`npm run dev`, com HMR): em
 `APP_ENV=local`, enquanto o `public/hot` existe, a CSP inclui a origem do
 servidor do Vite (e o WebSocket do HMR) — e nada além disso, nunca
-`'unsafe-eval'`. Ver `App\Support\ViteDevServerCsp`.
+`'unsafe-eval'`. Ver `Twstec\Kit\Foundation\Security\ViteDevServerCsp`.
 
 ## Comandos do dia a dia
 
