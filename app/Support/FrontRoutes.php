@@ -15,8 +15,9 @@ use Twstec\Kit\Auth\Support\Registration;
  * só de Node (sem PHP) e na imagem de produção num estágio só de Node — o
  * Wayfinder não cabe. No lugar dele, o servidor manda o mapa nome → caminho
  * (relativo) das rotas desta lista, e o front pergunta `route('login')`
- * (resources/js/lib/routes.ts). Nenhuma URL escrita no TypeScript, e a rota
- * de um módulo ausente simplesmente não está no mapa.
+ * (lib/routes.ts das telas do kit, no twstec/kit-foundation). Nenhuma URL
+ * escrita no TypeScript, e a rota de um módulo ausente simplesmente não está
+ * no mapa.
  *
  * Rota com parâmetro (a chave, o membro, o convite de uma linha da lista) vai
  * como MODELO, com o marcador do Laravel (`/api-keys/{key}/rotate`): o front

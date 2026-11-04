@@ -6,6 +6,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react, { reactCompilerPreset } from '@vitejs/plugin-react';
 import laravel from 'laravel-vite-plugin';
 import { defineConfig, lazyPlugins } from 'vite-plus';
+import kitReact from './vendor/twstec/kit-foundation/vite/react.js';
 
 // Tema do /admin (resources/css/filament.css): só com o painel instalado. O
 // /admin (twstec/kit-admin, que traz o Filament) é OPCIONAL e é o MESMO do
@@ -14,6 +15,10 @@ import { defineConfig, lazyPlugins } from 'vite-plus';
 const admin =
     existsSync(resolve('vendor/filament/filament')) &&
     existsSync(resolve('vendor/twstec/kit-admin'));
+
+// Telas do kit (twstec/kit-foundation, resources/react): o `@/` procura
+// primeiro em resources/js do aplicativo e depois no pacote — o aplicativo
+// vence. Ver vendor/twstec/kit-foundation/vite/react.js.
 
 // Diferenças para o vite.config.ts do kit oficial:
 // - sem o Wayfinder (@laravel/vite-plugin-wayfinder): ele roda `php artisan`
@@ -57,6 +62,7 @@ const polling = process.env.VITE_DEV_POLLING === 'true';
 
 export default defineConfig({
     plugins: lazyPlugins(() => [
+        kitReact(),
         laravel({
             input: [
                 'resources/css/app.css',

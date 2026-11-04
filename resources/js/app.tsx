@@ -5,12 +5,16 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { initializeTheme } from '@/hooks/use-theme';
 import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
+import { resolvePage } from '@/lib/pages';
 
 // Nome da plataforma (PLATFORM_NAME) no título da aba: vem das props do
 // servidor, não de uma variável de build.
 let appName = '';
 
+// Telas: as do aplicativo (resources/js/pages) e, sem elas, as do kit
+// (twstec/kit-foundation) — o aplicativo vence. Ver lib/pages.ts.
 void createInertiaApp({
+    resolve: resolvePage,
     // Página cujo título é o próprio nome (a inicial) não vira "Nome — Nome".
     title: (title) =>
         title && title !== appName ? `${title} — ${appName}` : appName,

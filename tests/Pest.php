@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
 use Tests\Support\EnforcedCsrfToken;
 use Tests\Support\ProjectLocales;
@@ -92,4 +93,54 @@ function kitConfigFile(string $key): string
     }
 
     return $file;
+}
+
+/*
+ * As telas React do kit moram no twstec/kit-foundation (resources/react), com
+ * a mesma árvore de resources/js; o aplicativo vence (o mesmo caminho em
+ * resources/js vale no lugar do pacote — vite/react.js e lib/pages.ts).
+ */
+function kitFrontPath(string $relative = ''): string
+{
+    return base_path('vendor/twstec/kit-foundation/resources/react'.($relative === '' ? '' : '/'.$relative));
+}
+
+/*
+ * O arquivo do front que vale para `$relative` (components/x.tsx,
+ * pages/auth/login.tsx…): o do aplicativo, se existir; senão, o do kit.
+ */
+function frontFile(string $relative): string
+{
+    foreach ([resource_path('js/'.$relative), kitFrontPath($relative)] as $file) {
+        if (is_file($file)) {
+            return $file;
+        }
+    }
+
+    throw new LogicException("Nenhum arquivo do front em {$relative} (nem no aplicativo, nem no kit).");
+}
+
+/*
+ * Todos os arquivos do front que valem: os do aplicativo e os do kit que o
+ * aplicativo não sobrescreve.
+ *
+ * @return list<string>
+ */
+function frontSourceFiles(): array
+{
+    $files = [];
+
+    foreach ([resource_path('js'), kitFrontPath()] as $root) {
+        if (! is_dir($root)) {
+            continue;
+        }
+
+        foreach (File::allFiles($root) as $file) {
+            $files[$file->getRelativePathname()] ??= $file->getPathname();
+        }
+    }
+
+    ksort($files);
+
+    return array_values($files);
 }

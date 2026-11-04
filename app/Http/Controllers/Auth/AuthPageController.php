@@ -24,8 +24,8 @@ use Twstec\Kit\Auth\Support\TwoFactorChallengeResult;
 use Twstec\Kit\Auth\Support\TwoFactorRequirement;
 
 /**
- * As TELAS de autenticação do starter React (páginas em
- * resources/js/pages/auth) — só GET, só HTTP.
+ * As TELAS de autenticação do starter React (páginas em pages/auth das
+ * telas do kit, no twstec/kit-foundation) — só GET, só HTTP.
  *
  * O envio de cada formulário é do pacote twstec/kit-auth: os controllers
  * dele recebem o POST (com o próprio `throttle:sensitive`), chamam a Action e

@@ -32,8 +32,8 @@ it('o front recebe só os idiomas disponíveis', function (array $locales): void
 })->with([[['pt_BR']], [['pt_BR', 'en']]]);
 
 it('o seletor e o campo de idioma do perfil só aparecem com mais de um idioma', function (): void {
-    $switcher = (string) file_get_contents(resource_path('js/components/locale-switcher.tsx'));
-    $profile = (string) file_get_contents(resource_path('js/pages/settings/profile.tsx'));
+    $switcher = (string) file_get_contents(frontFile('components/locale-switcher.tsx'));
+    $profile = (string) file_get_contents(frontFile('pages/settings/profile.tsx'));
 
     // O componente sai vazio antes de desenhar qualquer coisa...
     expect($switcher)->toMatch('/if \(app\.locales\.length < 2\) \{\s*return null;\s*\}/')

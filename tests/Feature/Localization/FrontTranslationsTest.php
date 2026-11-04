@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 use App\Support\FrontRoutes;
 use App\Support\FrontTranslations;
-use Illuminate\Support\Facades\File;
 use Inertia\Testing\AssertableInertia as Assert;
 use Twstec\Kit\Foundation\Kit;
 use Twstec\Kit\Foundation\Localization\Middleware\SetLocale;
@@ -23,8 +22,8 @@ function frontTranslationKeys(): array
     $groups = implode('|', FrontTranslations::GROUPS);
     $keys = [];
 
-    foreach (File::allFiles(resource_path('js')) as $file) {
-        preg_match_all("/['\"`]((?:{$groups})\\.[a-z0-9_]+(?:\\.[a-z0-9_]+)*)['\"`]/", $file->getContents(), $matches);
+    foreach (frontSourceFiles() as $file) {
+        preg_match_all("/['\"`]((?:{$groups})\\.[a-z0-9_]+(?:\\.[a-z0-9_]+)*)['\"`]/", (string) file_get_contents($file), $matches);
         array_push($keys, ...$matches[1]);
     }
 

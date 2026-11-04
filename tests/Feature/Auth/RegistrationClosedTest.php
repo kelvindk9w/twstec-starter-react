@@ -56,7 +56,7 @@ it('fechado: nenhuma tela recebe a rota de cadastro (os links não são renderiz
 ]);
 
 it('fechado: a tela de login e a inicial não desenham o link (o código das telas pergunta pela rota)', function (): void {
-    $login = (string) file_get_contents(resource_path('js/pages/auth/login.tsx'));
+    $login = (string) file_get_contents(frontFile('pages/auth/login.tsx'));
     $welcome = (string) file_get_contents(resource_path('js/pages/welcome.tsx'));
 
     // Todo uso de route('register') nessas telas está dentro de has('register').

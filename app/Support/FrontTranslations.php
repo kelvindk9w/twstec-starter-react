@@ -16,8 +16,9 @@ namespace App\Support;
  * (`passwords`) ficam no servidor. `webhooks` é o grupo do pacote
  * twstec/kit-webhooks (as telas de webhooks); sem o módulo, vai vazio.
  *
- * No front: resources/js/lib/i18n.ts (`t('auth.ui.login_title')`, com as
- * substituições `:nome` no mesmo formato do Laravel).
+ * No front: o lib/i18n.ts das telas do kit (twstec/kit-foundation,
+ * resources/react) — `t('auth.ui.login_title')`, com as substituições
+ * `:nome` no mesmo formato do Laravel.
  */
 final class FrontTranslations
 {

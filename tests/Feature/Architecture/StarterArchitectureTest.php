@@ -49,7 +49,7 @@ function reactSourceFiles(array $dirs): array
 }
 
 it('o starter React não usa a demonstração do kit', function () {
-    foreach (reactSourceFiles(['app', 'bootstrap', 'config', 'routes', 'resources', 'database']) as $file) {
+    foreach ([...reactSourceFiles(['app', 'bootstrap', 'config', 'routes', 'resources', 'database']), ...frontSourceFiles()] as $file) {
         $contents = (string) file_get_contents($file);
 
         expect(str_contains($contents, 'Twstec\\Kit\\Demo') || str_contains($contents, 'kit-demo'))
@@ -102,7 +102,7 @@ it('as telas do painel exigem sessão e e-mail confirmado', function (string $ur
 })->with(['dashboard', 'profile', 'notifications', 'settings/transaction-password']);
 
 it('o front não escreve URL da aplicação: usa o nome da rota', function () {
-    foreach (reactSourceFiles(['resources/js']) as $file) {
+    foreach (frontSourceFiles() as $file) {
         $contents = (string) file_get_contents($file);
 
         expect(preg_match('/(href|action|url)=\{?["\'`]\/[a-z]/i', $contents))->toBe(0, "{$file} escreve uma URL")
@@ -112,7 +112,7 @@ it('o front não escreve URL da aplicação: usa o nome da rota', function () {
 
 it('o front não mostra texto em inglês fixo nos componentes (i18n)', function () {
     // Os textos que o kit oficial trazia fixos nos componentes do shadcn/ui.
-    foreach (reactSourceFiles(['resources/js']) as $file) {
+    foreach (frontSourceFiles() as $file) {
         $contents = (string) file_get_contents($file);
 
         foreach (['Toggle sidebar', '>Close<', '>More<', '"Loading"', 'Log in', 'Sign up', 'Forgot your password', 'Remember me', 'Hide password', 'Show password'] as $text) {

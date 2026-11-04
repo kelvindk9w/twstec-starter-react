@@ -37,8 +37,12 @@ return [
 
     'pages' => [
 
+        // As telas do aplicativo e, sem elas, as do kit (twstec/kit-foundation,
+        // resources/react/pages) — o aplicativo vence; no navegador, o
+        // lib/pages.ts do pacote segue a mesma ordem.
         'paths' => [
             resource_path('js/pages'),
+            base_path('vendor/twstec/kit-foundation/resources/react/pages'),
         ],
 
         'extensions' => [

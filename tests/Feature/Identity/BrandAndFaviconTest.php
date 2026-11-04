@@ -41,7 +41,7 @@ it('sem logotipo, o front recebe a inicial do nome e a desenha no lugar da marca
 
     expect($this->get('/dashboard', inertiaHeaders())->assertOk()->json('props.app.initial'))->toBe('Z');
 
-    $icon = (string) file_get_contents(resource_path('js/components/app-logo-icon.tsx'));
+    $icon = (string) file_get_contents(frontFile('components/app-logo-icon.tsx'));
     expect($icon)->toContain('{app.initial}')
         ->not->toContain(KIT_MARK_PATH);
 });

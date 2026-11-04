@@ -33,8 +33,10 @@
              logotipo ou a inicial do nome gerada (BrandMark) — nunca o do kit. --}}
         {{ \Twstec\Kit\Foundation\Support\BrandMark::faviconLinks() }}
 
+        {{-- A página aberta vai junto: a do aplicativo (resources/js/pages) ou,
+             sem ela, a das telas do kit (twstec/kit-foundation) — ReactScreens. --}}
         @viteReactRefresh
-        @vite(['resources/css/app.css', 'resources/js/app.tsx', "resources/js/pages/{$page['component']}.tsx"])
+        @vite(['resources/css/app.css', 'resources/js/app.tsx', \Twstec\Kit\Foundation\Customization\ReactScreens::pageEntry($page['component'])])
         <x-inertia::head>
             <title>{{ platform()->name }}</title>
         </x-inertia::head>

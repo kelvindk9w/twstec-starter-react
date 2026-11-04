@@ -22,6 +22,15 @@ duas etapas, notificações, seletor de conta, conta e membros, convites,
 chaves de API, projetos e foto de perfil — com E2E próprio (Playwright),
 imagem de produção própria e as combinações de módulos no CI.
 
+**Telas do kit no pacote:** as páginas, os layouts e os componentes das
+telas do kit (entrada, segundo fator, perfil, contas, chaves de API,
+webhooks, shadcn/ui…) moram no `twstec/kit-foundation`
+(`resources/react`, a mesma árvore de `resources/js`). O projeto tem só o que
+é dele (`app.tsx`, a página inicial e o dashboard) e, para mudar uma tela ou
+um componente do kit, copia só aquele arquivo para o mesmo caminho em
+`resources/js` — o do aplicativo vence. Ver
+[docs/personalizacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/personalizacao.md#telas-react).
+
 **Criar um projeto** (Packagist; durante o beta, com `:^2.0@beta`):
 `composer create-project "twstec/starter-react:^2.0@beta" meu-app` ou
 `laravel new meu-app --using="twstec/starter-react:^2.0@beta"`. O
@@ -130,9 +139,9 @@ docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -w /app nod
 
 | Veio do kit oficial | Trocado |
 | --- | --- |
-| React 19, Inertia 3 (`@inertiajs/vite`, `Form`, layouts por página), TypeScript estrito, Tailwind 4, componentes shadcn/ui (`resources/js/components/ui`), o layout do painel com menu lateral recolhível e o avatar no pé, as telas de autenticação em cartão, o React Compiler, o Vite+ (`vp`: build, lint com oxlint e formatação com oxfmt) | **Autenticação:** sai o Fortify (e passkeys, 2FA por app, confirmação de senha); entram os controllers do `twstec/kit-auth` com respostas Inertia (abaixo) |
-| | **Rotas no front:** sai o Wayfinder (roda `php artisan` no build; aqui o build é só Node). O servidor manda o mapa nome → caminho das rotas usadas (`App\Support\FrontRoutes`) e o front pergunta `route('login')` (`resources/js/lib/routes.ts`) |
-| | **Textos:** nada em inglês fixo. O front lê as traduções do Laravel (`lang/{pt_BR,en,es}`), enviadas uma vez por idioma (`App\Support\FrontTranslations`, `resources/js/lib/i18n.ts`) |
+| React 19, Inertia 3 (`@inertiajs/vite`, `Form`, layouts por página), TypeScript estrito, Tailwind 4, componentes shadcn/ui (`components/ui` das telas do kit), o layout do painel com menu lateral recolhível e o avatar no pé, as telas de autenticação em cartão, o React Compiler, o Vite+ (`vp`: build, lint com oxlint e formatação com oxfmt) | **Autenticação:** sai o Fortify (e passkeys, 2FA por app, confirmação de senha); entram os controllers do `twstec/kit-auth` com respostas Inertia (abaixo) |
+| | **Rotas no front:** sai o Wayfinder (roda `php artisan` no build; aqui o build é só Node). O servidor manda o mapa nome → caminho das rotas usadas (`App\Support\FrontRoutes`) e o front pergunta `route('login')` (`lib/routes.ts` das telas do kit) |
+| | **Textos:** nada em inglês fixo. O front lê as traduções do Laravel (`lang/{pt_BR,en,es}`), enviadas uma vez por idioma (`App\Support\FrontTranslations`, `lib/i18n.ts` das telas do kit) |
 | | **Fonte:** a Instrument Sans vem do `@fontsource` (a CSP do kit não permite fonte externa; o oficial usa o Bunny Fonts) |
 | | **Tema:** a regra do Livewire — `localStorage` do dispositivo → o tema da CONTA (`users.theme`) → sistema, aplicada antes da primeira pintura |
 | | **Usuário nas props:** lista fechada de campos (`App\Support\SharedUser`), nunca o model serializado |
@@ -141,7 +150,7 @@ docker run --rm --user $(id -u):$(id -g) -e HOME=/tmp -v $(pwd):/app -w /app nod
 ## Autenticação: a do pacote, com respostas Inertia
 
 As **telas** (GET) são do starter (`App\Http\Controllers\Auth\AuthPageController`
-→ páginas em `resources/js/pages/auth`); os **envios** (POST) são os
+→ páginas em `pages/auth` das telas do kit); os **envios** (POST) são os
 controllers do `twstec/kit-auth`, que trazem o próprio `throttle:sensitive`.
 Os endereços e os nomes das rotas são os mesmos do Livewire. O que volta ao
 navegador sai das **implementações Inertia dos 12 contratos de resposta** do
@@ -216,7 +225,7 @@ convites, transferir e excluir), **criar conta de empresa**
 - As respostas do link de convite e da troca de conta são as Inertia do
   aplicativo (`App\Http\Responses\Inertia\Accounts`). O token do convite
   não vai para as props: o front o lê do próprio endereço.
-- Componentes reutilizáveis em `resources/js/components` (seletor de conta,
+- Componentes reutilizáveis em `components` das telas do kit (seletor de conta,
   diálogo de ação sensível, diálogo de confirmação, alternador tabela/cartões,
   ação só com ícone + tooltip, revelação única da secreta, listas de membros e
   convites, foto de perfil).

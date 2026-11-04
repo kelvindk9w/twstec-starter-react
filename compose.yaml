@@ -141,6 +141,11 @@ services:
             - '${DEV_BIND:-127.0.0.1}:${DEV_VITE_PORT:-8030}:5173'
         volumes:
             - .:/var/www/html
+        # As telas do kit vêm do vendor/ (twstec/kit-foundation, lido pelo
+        # vite.config): num clone novo, o init é quem o instala.
+        depends_on:
+            init:
+                condition: service_completed_successfully
 
     postgres:
         image: postgres:18-alpine
