@@ -2,7 +2,7 @@ import { chromium, request as requestFactory, type FullConfig } from '@playwrigh
 import { mkdirSync } from 'node:fs';
 import { adminEmail, adminPassword, adminState, mailpitUrl, userEmail, userPassword, userState } from './support/env';
 import { adminLogin, loginWithCode } from './support/flows';
-import { isolationProblem } from './support/project-env';
+import { isolationProblem, mailpitProblem } from './support/project-env';
 
 // =============================================================================
 // Global setup do E2E do React: autentica UMA vez e grava as sessões que os
@@ -14,7 +14,8 @@ import { isolationProblem } from './support/project-env';
 //   apaga, no fim de cada teste, as pessoas que o teste criou.
 //
 // ANTES DE TUDO, a trava de isolamento (support/project-env.ts): o site que
-// responde tem de ser ESTE projeto, e o Mailpit o dele — senão a suíte para
+// responde tem de ser ESTE projeto (cookie de sessão), e o Mailpit o dele
+// (rótulo) — inclusive com E2E_BASE_URL/E2E_MAILPIT_URL. Senão a suíte para
 // sem criar nem apagar nada.
 //
 // As duas pessoas vêm de tests/e2e/fixtures.php. Com o segundo fator
@@ -33,7 +34,7 @@ export default async function globalSetup(config: FullConfig): Promise<void> {
 
     try {
         const user = await browser.newPage({ baseURL, locale });
-        const configured = isolationProblem(String(baseURL), mailpitUrl, null);
+        const configured = isolationProblem(String(baseURL), mailpitUrl, null) ?? (await mailpitProblem(mailpitUrl));
 
         if (configured !== null) {
             throw new Error(`global-setup: ${configured}. O E2E cria e apaga pessoas: ele só roda no próprio projeto.`);
