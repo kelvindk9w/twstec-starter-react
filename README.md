@@ -33,9 +33,12 @@ um componente do kit, copia só aquele arquivo para o mesmo caminho em
 
 **Criar um projeto** (Packagist; durante o beta, com `:^2.0@beta`):
 `composer create-project "twstec/starter-react:^2.0@beta" meu-app` ou
-`laravel new meu-app --using="twstec/starter-react:^2.0@beta"`. O
+`laravel new meu-app --using="twstec/starter-react:~2.0@beta" --database=pgsql --phpunit --no-boost`
+(as opções a mais são obrigatórias no `laravel new` — ver
+[docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#com-o-instalador-do-laravel-laravel-new)). O
 `post-create-project-cmd` chama o instalador (`php artisan tws:install`),
-que pergunta os módulos opcionais num terminal — ver
+que num terminal pergunta os módulos opcionais, o banco (PostgreSQL, o
+padrão, ou SQLite — o modo protótipo) e se o projeto usa Redis — ver
 [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#starter-react).
 
 ## Docker de desenvolvimento (projeto criado)
@@ -56,7 +59,8 @@ docker compose stop                           # para (os dados ficam)
 
 Sobem o site (nginx + PHP-FPM), o PostgreSQL, o Redis, o Mailpit (os e-mails,
 em `http://<nome>.localhost:802N`), a fila, o agendador e o Vite (recarga ao
-vivo). Tudo é publicado só em `127.0.0.1`; o Redis nunca, o banco só com
+vivo) — com SQLite, sem o PostgreSQL; sem Redis, sem o Redis. Tudo é
+publicado só em `127.0.0.1`; o Redis nunca, o banco só com
 `COMPOSE_PROFILES=db-port` no `.env`. Trocar portas ou o nome: edite o `.env`
 e rode `docker compose up -d`. No VS Code: extensão **Dev Containers** →
 "Reopen in Container". Detalhes em
@@ -153,7 +157,7 @@ As **telas** (GET) são do starter (`App\Http\Controllers\Auth\AuthPageControlle
 → páginas em `pages/auth` das telas do kit); os **envios** (POST) são os
 controllers do `twstec/kit-auth`, que trazem o próprio `throttle:sensitive`.
 Os endereços e os nomes das rotas são os mesmos do Livewire. O que volta ao
-navegador sai das **implementações Inertia dos 12 contratos de resposta** do
+navegador sai das **implementações Inertia dos 13 contratos de resposta** do
 pacote (`App\Http\Responses\Inertia`, registradas no `AppServiceProvider`):
 
 - **Quem atravessa a porta** (login, login pelo código do segundo fator,
@@ -186,7 +190,9 @@ idioma, tema, foto, e três estados), `kit.modules` (módulos opcionais
 instalados — `Kit::has()`), `navigation` (o menu lateral, montado no servidor
 com a arquitetura de informação do Livewire), `routes`, `flash`,
 `accountMenu` (o seletor de conta: a conta atual e as contas da pessoa, com
-o papel — só com o pacote de contas), `translations` e `sidebarOpen`. Rota com
+o papel — só com o pacote de contas), `twoFactorGrace` (até quando a
+pessoa pode adiar o segundo fator obrigatório, na carência), `translations` e
+`sidebarOpen`. Rota com
 parâmetro chega em `routes` como modelo (`/api-keys/{key}/rotate`), preenchido
 no front (`route('panel.api-keys.rotate', { key })`). **Nenhuma credencial** — um teste varre as
 props de todas as telas atrás de senha, hash, token, código e pepper
