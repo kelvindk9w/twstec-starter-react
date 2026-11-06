@@ -31,9 +31,9 @@ um componente do kit, copia só aquele arquivo para o mesmo caminho em
 `resources/js` — o do aplicativo vence. Ver
 [docs/personalizacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/personalizacao.md#telas-react).
 
-**Criar um projeto** (Packagist; durante o beta, com `:~2.0@beta`):
-`composer create-project "twstec/starter-react:~2.0@beta" meu-app` ou
-`laravel new meu-app --using="twstec/starter-react:~2.0@beta" --database=pgsql --phpunit --no-boost`
+**Criar um projeto** (Packagist, com `:~2.0`):
+`composer create-project "twstec/starter-react:~2.0" meu-app` ou
+`laravel new meu-app --using="twstec/starter-react:~2.0" --database=pgsql --phpunit --no-boost`
 (as opções a mais são obrigatórias no `laravel new` — ver
 [docs/instalacao.md](https://github.com/kelvindk9w/tws-laravel-starter-kit/blob/desenvolvimento/docs/instalacao.md#com-o-instalador-do-laravel-laravel-new)). O
 `post-create-project-cmd` chama o instalador (`php artisan tws:install`),
