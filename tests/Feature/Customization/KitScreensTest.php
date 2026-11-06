@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Vite;
 use Inertia\Testing\AssertableInertia as Assert;
 use Twstec\Kit\Foundation\Customization\ReactScreens;
 
@@ -14,14 +15,12 @@ use Twstec\Kit\Foundation\Customization\ReactScreens;
 // resources/js vale no lugar do pacote. O projeto criado não recebe cópias.
 // =============================================================================
 
-it('o aplicativo não traz cópia das telas do kit: só o que é dele', function (): void {
-    $application = collect(File::allFiles(resource_path('js')))
-        ->map(fn (SplFileInfo $file): string => str_replace(DIRECTORY_SEPARATOR, '/', $file->getRelativePathname()))
-        ->sort()
-        ->values()
-        ->all();
-
-    expect($application)->toBe(['app.tsx', 'pages/dashboard.tsx', 'pages/welcome.tsx', 'types/vite-env.d.ts']);
+// Que o STARTER não traz cópia das telas do kit (só app.tsx, a inicial e o
+// dashboard) é conferido em StarterOwnFilesTest.php, só no repositório do
+// kit: no projeto criado, telas novas e cópias personalizadas em
+// resources/js são o uso normal (docs/personalizacao.md).
+it('as telas do kit vêm do pacote', function (): void {
+    expect(resource_path('js/app.tsx'))->toBeFile();
 
     foreach (['pages/auth/login.tsx', 'layouts/app-layout.tsx', 'components/ui/button.tsx', 'lib/pages.ts'] as $kitFile) {
         expect(kitFrontPath($kitFile))->toBeFile();
@@ -48,6 +47,13 @@ it('sem a tela no aplicativo, vale a do kit: a página existe e o build a carreg
     $chunk = $manifest['vendor/twstec/kit-foundation/resources/react/pages/auth/login.tsx']['file'] ?? null;
 
     expect($chunk)->toBeString();
+
+    // Com o Vite de desenvolvimento no ar (o serviço `vite` do compose.yaml
+    // grava o public/hot), o documento apontaria para ele, e não para o
+    // build — é o caso do `scripts/verificar` no projeto criado. Aqui o que
+    // se confere é o build: o arquivo de "hot" passa a ser um que não existe.
+    Vite::useHotFile(storage_path('framework/testing/vite-hot-ausente'));
+
     $this->get('/login')->assertOk()->assertSee('build/'.$chunk, false);
 });
 
@@ -82,8 +88,12 @@ it('o Vite procura cada `@/…` primeiro no aplicativo e depois no kit', functio
     $this->beforeApplicationDestroyed(fn () => File::deleteDirectory($root));
 
     $script = <<<'JS'
+        import { pathToFileURL } from 'node:url';
+
         const [plugin, root] = process.argv.slice(1);
-        const kit = (await import(plugin)).default();
+        // Por URL file://: no Windows, o import() recusa o caminho com a letra
+        // do disco (D:\…).
+        const kit = (await import(pathToFileURL(plugin).href)).default();
         kit.configResolved({ root });
         const resolve = (id) => kit.resolveId(id);
         console.log(JSON.stringify({
@@ -100,8 +110,9 @@ it('o Vite procura cada `@/…` primeiro no aplicativo e depois no kit', functio
 
     $resolved = json_decode($result->output(), true);
 
+    // O caminho comparado com `/`: no Windows, o Node devolve com `\`.
     expect($resolved['own'])->toBeNull('o arquivo do aplicativo segue o caminho normal do Vite')
-        ->and($resolved['kit'])->toBe($root.'/vendor/twstec/kit-foundation/resources/react/components/card.tsx')
+        ->and(str_replace('\\', '/', (string) $resolved['kit']))->toBe(str_replace('\\', '/', $root).'/vendor/twstec/kit-foundation/resources/react/components/card.tsx')
         ->and($resolved['missing'])->toBeNull()
         ->and($resolved['other'])->toBeNull();
 });

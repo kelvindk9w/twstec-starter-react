@@ -10,3 +10,4 @@
 # portanto, do projeto criado (o `composer archive` e o ZIP do GitHub
 # respeitam o export-ignore).
 /tests/Feature/Localization/SharedTextsWithLivewireTest.php export-ignore
+/tests/Feature/Customization/StarterOwnFilesTest.php export-ignore

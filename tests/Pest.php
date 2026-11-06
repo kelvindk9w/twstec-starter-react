@@ -10,9 +10,11 @@ use Illuminate\Support\Facades\Mail;
 use Tests\Support\EnforcedCsrfToken;
 use Tests\Support\ProjectLocales;
 use Tests\TestCase;
+use Twstec\Kit\Accounts\Account\CurrentAccount;
 use Twstec\Kit\Auth\Enums\VerificationPurpose;
 use Twstec\Kit\Auth\Mail\VerificationCodeMail;
 use Twstec\Kit\Foundation\Customization\PackageConfig;
+use Twstec\Kit\Foundation\Kit;
 
 // Arranjo das telas de contas e os arquivos de teste de upload (bytes reais).
 require_once __DIR__.'/Support/Accounts.php';
@@ -23,6 +25,21 @@ require_once __DIR__.'/Fixtures/uploads.php';
 pest()->extend(TestCase::class)
     ->use(RefreshDatabase::class)
     ->in('Feature', 'Unit');
+
+// Telas do /admin testadas com Livewire::test (as do kit e as que o projeto
+// cria em app/Filament): o painel opera em MODO SISTEMA das contas (vê todas
+// as contas) pelo middleware persistente do plugin
+// (Twstec\Kit\Admin\Http\Middleware\OperateAdminPanelAsSystem) — e o
+// Livewire::test não passa pela pilha HTTP do painel. Sem isto, a tela
+// testada enxergaria só a conta pessoal de quem está logado. Aqui o modo
+// sistema é declarado para o teste inteiro, como o painel faz a cada
+// requisição — o mesmo do starter Livewire.
+pest()->in('Feature/Admin')->beforeEach(function (): void {
+    // Sem o pacote de contas não há conta nem modo sistema (o painel se adapta).
+    if (Kit::has('accounts')) {
+        app(CurrentAccount::class)->push(CurrentAccount::systemFrame('teste do /admin (Livewire::test)'));
+    }
+});
 
 /*
  * Visita de uma página pelo Inertia (XHR), como o front React faz depois da

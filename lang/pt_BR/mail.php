@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-// Strings de e-mails transacionais (pt-BR). Toda string passa por __().
-// O corpo dos e-mails vive em resources/views/mail/messages/**, sobre o layout
-// único <x-email::layouts.kit>. Ver docs/emails.md. O rodapé comum a todos
-// (mail.footer.*) vem do pacote twstec/kit-foundation.
+// Textos de e-mail do projeto (pt-BR): a galeria de pré-visualização. Os
+// e-mails do kit (assuntos, corpos, rodapé) vêm dos pacotes; para mudar um
+// texto deles, repita aqui só a chave que muda (ver docs/personalizacao.md e
+// docs/emails.md).
 
 return [
 
