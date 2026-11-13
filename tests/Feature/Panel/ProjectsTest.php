@@ -3,8 +3,11 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Twstec\Kit\Accounts\Deletion\DeletionImpediment;
+use Twstec\Kit\Accounts\Tenancy\Deletion\ProjectDeletionImpediments;
 use Twstec\Kit\Accounts\Tenancy\Enums\ProjectStatus;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
+use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
 
 // =============================================================================
 // Projetos pelo painel React (ProjectService, o mesmo da API e do Livewire):
@@ -59,6 +62,34 @@ it('cria, renomeia, arquiva, reativa e exclui pela tela', function () {
 
     $this->delete("/projects/{$projeto->uuid}")->assertSessionHas('status', __('panel.projects.deleted'));
     expect(comoSistema(fn () => Project::query()->count()))->toBe(0);
+})->group('accounts');
+
+it('exclusão recusada por uma regra do aplicativo: o motivo volta em errors.project (não o sucesso), nada sai e a recusa fica na trilha', function () {
+    ['empresa' => $empresa, 'dono' => $dono] = contaComEquipe();
+    $projeto = projetoNa($empresa, $dono, 'Com cobranças');
+    app(ProjectDeletionImpediments::class)->register(fn (Project $alvo): array => [
+        new DeletionImpediment('project_has_charges', 'O projeto tem cobranças e não pode ser excluído.'),
+    ]);
+    entrarNa($dono, $empresa);
+
+    $this->delete("/projects/{$projeto->uuid}")
+        ->assertRedirect('/projects')
+        ->assertSessionHasErrors(['project' => 'O projeto tem cobranças e não pode ser excluído.'])
+        ->assertSessionMissing('status');
+
+    // Como o cliente do Inertia faz: o DELETE e o GET do redirect, na tela.
+    $this->withHeaders(inertiaHeaders())->followingRedirects()->delete("/projects/{$projeto->uuid}")
+        ->assertJsonPath('component', 'projects/index')
+        ->assertJsonPath('props.errors.project', 'O projeto tem cobranças e não pode ser excluído.')
+        ->assertJsonPath('props.flash.status', null)
+        ->assertJsonCount(1, 'props.projects');
+
+    // As duas tentativas ficam na trilha, cada uma com o motivo.
+    $recusas = comoSistema(fn () => AuditEvent::query()->where('action', 'project.deleted')->get());
+    expect($recusas)->toHaveCount(2)
+        ->and($recusas->pluck('outcome')->map->value->unique()->all())->toBe(['denied'])
+        ->and($recusas->pluck('reason')->unique()->all())->toBe(['O projeto tem cobranças e não pode ser excluído.'])
+        ->and($recusas->pluck('subject_uuid')->unique()->all())->toBe([(string) $projeto->uuid]);
 })->group('accounts');
 
 it('member cria e renomeia, mas não exclui: sem o botão e 403 no envio', function () {

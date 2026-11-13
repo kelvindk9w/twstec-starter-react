@@ -13,6 +13,7 @@ use Illuminate\Routing\Controllers\Middleware;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use Twstec\Kit\Accounts\Account\Actions\ChangeApiLimits;
 use Twstec\Kit\Accounts\Account\Actions\DeleteAccount;
 use Twstec\Kit\Accounts\Account\Actions\LeaveAccount;
 use Twstec\Kit\Accounts\Account\Actions\RenameAccount;
@@ -25,6 +26,8 @@ use Twstec\Kit\Accounts\Account\Models\AccountInvitation;
 use Twstec\Kit\Accounts\Account\Queries\AccountDirectory;
 use Twstec\Kit\Accounts\Account\Support\MemberRules;
 use Twstec\Kit\Accounts\Accounts;
+use Twstec\Kit\Accounts\Tenancy\Limits\ApiLimit;
+use Twstec\Kit\Accounts\Tenancy\Limits\ApiLimitsPanel;
 
 /**
  * A PÁGINA DA CONTA ATUAL — dados, membros, convites e os fluxos de dono.
@@ -73,6 +76,9 @@ final class AccountController implements HasMiddleware
             'members' => $this->members($directory, $account, $user, $papel),
             'invitations' => $canManage ? $this->invitations($directory) : [],
             'roleOptions' => array_map(static fn (AccountRole $r): array => ['value' => $r->value, 'label' => $r->label()], [AccountRole::Member, AccountRole::Admin]),
+            // Limites da API da conta (nulo com API_LIMITS_ENABLED=false: a
+            // seção some). Só o dono baixa — a regra é da Action.
+            'apiLimits' => ApiLimitsPanel::for($account),
             'can' => [
                 'rename' => ! $account->isPersonal() && Accounts::can(AccountAbility::UpdateAccount),
                 'invite' => $canManage,
@@ -95,6 +101,30 @@ final class AccountController implements HasMiddleware
         $rename->handle($this->user($request), $validated['name']);
 
         return to_route('panel.account')->with('status', __('panel.account.renamed'));
+    }
+
+    /**
+     * Baixar os limites da API da conta (só o dono; nunca acima do que a
+     * plataforma dá). Campo vazio tira a redução. A Action confere o papel e
+     * o máximo, e grava a trilha (inclusive a recusa).
+     *
+     * @throws ValidationException
+     */
+    public function apiLimits(Request $request, ChangeApiLimits $change): RedirectResponse
+    {
+        $rules = [];
+        $names = [];
+
+        foreach (ApiLimit::cases() as $limit) {
+            $rules[$limit->value] = ['nullable', 'integer', 'min:1', 'max:'.ApiLimit::MAX];
+            $names[$limit->value] = $limit->label();
+        }
+
+        $validated = $request->validate($rules, [], $names);
+
+        $change->handle($this->user($request), $validated);
+
+        return to_route('panel.account')->with('status', __('panel.account.api_limits_saved'));
     }
 
     /**

@@ -211,6 +211,7 @@ Route::middleware(['auth', 'verified'])->group(function (): void {
         // por uma Action do pacote (papel, trilha, recusas).
         Route::get('account', [AccountController::class, 'show'])->name('panel.account');
         Route::patch('account', [AccountController::class, 'update'])->name('panel.account.update');
+        Route::patch('account/api-limits', [AccountController::class, 'apiLimits'])->name('panel.account.api-limits');
         Route::post('account/leave', [AccountController::class, 'leave'])->name('panel.account.leave');
         Route::post('account/transfer/code', [AccountController::class, 'transferCode'])->name('panel.account.transfer.code');
         Route::post('account/transfer', [AccountController::class, 'transfer'])->name('panel.account.transfer');

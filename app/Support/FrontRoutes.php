@@ -88,6 +88,7 @@ final class FrontRoutes
         'panel.webhooks.resend',
         'panel.account',
         'panel.account.update',
+        'panel.account.api-limits',
         'panel.account.leave',
         'panel.account.transfer.code',
         'panel.account.transfer',

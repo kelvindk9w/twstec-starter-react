@@ -16,6 +16,7 @@ use Twstec\Kit\Accounts\Account\Support\AccountResourceGuard;
 use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Accounts\Tenancy\Enums\ProjectAttempt;
 use Twstec\Kit\Accounts\Tenancy\Enums\ProjectStatus;
+use Twstec\Kit\Accounts\Tenancy\Exceptions\ProjectDeletionRefusedException;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Accounts\Tenancy\Services\ProjectService;
 
@@ -101,13 +102,25 @@ final class ProjectsController
         return to_route('panel.projects')->with('status', __('panel.projects.updated'));
     }
 
+    /**
+     * Exclui. Uma regra do aplicativo (ou um registro que ainda aponta para o
+     * projeto) pode recusar: nada sai, a recusa fica na trilha e a tela mostra
+     * o motivo (`errors.project`) no lugar do aviso de sucesso.
+     */
     public function destroy(string $project): RedirectResponse
     {
         $this->guard->authorize(AccountAbility::DeleteProjects, ProjectAttempt::Deleted, $project);
+        $model = $this->guard->project($project, ProjectAttempt::Deleted);
 
-        // O vínculo N:N cai junto; a chave que só atendia este projeto segue
-        // restrita, agora a nenhum (ProjectService::delete()).
-        $this->projects->delete($this->guard->project($project, ProjectAttempt::Deleted));
+        try {
+            // O vínculo N:N cai junto; a chave que só atendia este projeto
+            // segue restrita, agora a nenhum (ProjectService::delete()).
+            $this->projects->delete($model);
+        } catch (ProjectDeletionRefusedException $refused) {
+            $this->guard->projectDeletionRefused($model, $refused);
+
+            return to_route('panel.projects')->withErrors(['project' => $refused->getMessage()]);
+        }
 
         return to_route('panel.projects')->with('status', __('panel.projects.deleted'));
     }

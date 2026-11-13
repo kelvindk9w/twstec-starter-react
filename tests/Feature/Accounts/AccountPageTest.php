@@ -19,6 +19,7 @@ use Twstec\Kit\Accounts\Accounts;
 use Twstec\Kit\Accounts\Deletion\DeletionImpediment;
 use Twstec\Kit\Accounts\Deletion\DeletionImpediments;
 use Twstec\Kit\Accounts\Deletion\DeletionRequest;
+use Twstec\Kit\Accounts\Tenancy\Limits\ApiLimits;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Foundation\Audit\Models\AuditEvent;
 
@@ -420,4 +421,39 @@ it('o link assinado do e-mail abre as chaves na conta certa; sem assinatura, nã
     expect(session('accounts.current'))->toBe($empresa->uuid);
 
     $this->get(URL::signedRoute('accounts.open', ['account' => $empresa->uuid, 'to' => 'outro'], absolute: false))->assertNotFound();
+})->group('accounts');
+
+it('limites da API: o dono baixa (nunca acima do máximo), os outros papéis só veem — e o envio por fora é recusado', function () {
+    config()->set('api_keys.limits.enabled', true);
+    config()->set('api_keys.limits.quota', 1000);
+    ['empresa' => $empresa, 'dono' => $dono, 'admin' => $admin] = contaComEquipe();
+
+    $props = propsDaConta($dono, $empresa);
+    expect($props['apiLimits']['canReduce'])->toBeTrue()
+        ->and(collect($props['apiLimits']['limits'])->firstWhere('key', 'quota'))
+        ->toMatchArray(['effective' => 1000, 'platform' => 1000, 'own' => null]);
+
+    $this->from('/account')->patch('/account/api-limits', ['quota' => '1001'])
+        ->assertRedirect('/account')
+        ->assertSessionHasErrors(['quota' => __('accounts.api_limits.above_platform', ['max' => 1000])]);
+    $this->from('/account')->patch('/account/api-limits', ['quota' => '300', 'concurrency' => ''])
+        ->assertRedirect('/account')
+        ->assertSessionHas('status', __('panel.account.api_limits_saved'));
+
+    expect(collect(propsDaConta($dono, $empresa)['apiLimits']['limits'])->firstWhere('key', 'quota'))
+        ->toMatchArray(['effective' => 300, 'platform' => 1000, 'own' => 300]);
+
+    $props = propsDaConta($admin, $empresa);
+    expect($props['apiLimits']['canReduce'])->toBeFalse();
+    $this->patch('/account/api-limits', ['quota' => '10'])->assertForbidden();
+
+    expect(app(ApiLimits::class)->effective($empresa->refresh())->quota)->toBe(300)
+        ->and(AuditEvent::query()->where('tenant_uuid', $empresa->uuid)->where('action', 'account.api_limits_changed')->pluck('outcome')->map(fn ($o) => $o->value)->sort()->values()->all())
+        ->toBe(['denied', 'denied', 'success']);
+})->group('accounts');
+
+it('limites da API desligados (padrão): a página não leva a seção', function () {
+    ['empresa' => $empresa, 'dono' => $dono] = contaComEquipe();
+
+    expect(propsDaConta($dono, $empresa)['apiLimits'])->toBeNull();
 })->group('accounts');
