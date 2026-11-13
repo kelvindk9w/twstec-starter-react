@@ -10,18 +10,19 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Illuminate\Support\Carbon;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Twstec\Kit\Accounts\Account\Enums\AccountAbility;
 use Twstec\Kit\Accounts\Account\Support\AccountResourceGuard;
 use Twstec\Kit\Accounts\Accounts;
+use Twstec\Kit\Accounts\ApiKeys\Confirmation\ApiKeyCreationConfirmation;
 use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyAttempt;
 use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
 use Twstec\Kit\Accounts\ApiKeys\Http\Requests\StoreApiKeyRequest;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
 use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
+use Twstec\Kit\Accounts\ApiKeys\Support\ApiKeyExpiry;
 use Twstec\Kit\Accounts\Tenancy\Models\Project;
 use Twstec\Kit\Auth\Services\SensitiveActionService;
 
@@ -34,8 +35,12 @@ use Twstec\Kit\Auth\Services\SensitiveActionService;
  * As chaves são da CONTA ATUAL (o escopo das contas filtra toda consulta:
  * uuid de outra conta = 404). Gerir exige owner ou admin
  * (AccountAbility::ManageApiKeys) — conferido em CADA envio, não só no botão.
- * Criar e rotacionar são AÇÕES SENSÍVEIS (senha de transação → código → token
- * consumido aqui, como o middleware `sensitive.token` faria na API).
+ * Rotacionar é AÇÃO SENSÍVEL (senha de transação → código → token consumido
+ * aqui, como o middleware `sensitive.token` faria na API). Criar segue a
+ * confirmação do ambiente das chaves (ApiKeyCreationConfirmation,
+ * `api_keys.creation_confirmation`): em `live`, senha de transação + código,
+ * sempre; em `test`, por padrão, só o código por e-mail. A validade é
+ * escolhida na criação: sem validade, N horas ou N dias (ApiKeyExpiry).
  *
  * Toda recusa fica na trilha (AccountResourceGuard), com a ação tentada: o
  * papel que não permite (403), a chave que não está na conta atual (o mesmo
@@ -68,41 +73,72 @@ final class ApiKeysController implements HasMiddleware
     }
 
     /**
-     * Criação, passos 1 e 2: confere o formulário (e o papel, e a senha de
-     * transação definida) e, com `stage=send`, manda o código.
+     * Criação, passos 1 e 2: confere o formulário (e o papel e, se a política
+     * do ambiente pede, a senha de transação definida) e, com `stage=send`,
+     * manda o código — conferida a senha de transação só na política forte.
      *
      * @throws ValidationException
      */
-    public function code(Request $request): RedirectResponse
+    public function code(Request $request, ApiKeyCreationConfirmation $confirmation): RedirectResponse
     {
         $this->authorizeManage(ApiKeyAttempt::Created);
         $this->validateKeyForm($request);
         $this->resolveProjects($request, ApiKeyAttempt::Created);
-        $this->requireTransactionPassword($request, 'name', __('panel.api_keys.sensitive_requires_password'));
 
-        return $this->afterStage($request);
+        if ($confirmation->requiresTransactionPassword()) {
+            $this->requireTransactionPassword($request, 'name', __('panel.api_keys.sensitive_requires_password'));
+        }
+
+        $redirect = to_route('panel.api-keys');
+
+        if ($request->input('stage') !== 'send') {
+            return $redirect;
+        }
+
+        if ($confirmation->requiresTransactionPassword()) {
+            $request->validate(
+                ['transaction_password' => ['required', 'string']],
+                [],
+                ['transaction_password' => __('auth.ui.transaction_password_title')],
+            );
+        }
+
+        $confirmation->sendCode($this->user($request), $request->string('transaction_password')->toString());
+
+        return $redirect->with('status', __('auth.verification_code.sent'));
     }
 
     /**
-     * Criação, passo 3: código → token → a chave. A resposta é a própria tela,
-     * com a secreta UMA vez.
+     * Criação, passo 3: o código confirma a criação (na política forte, ele
+     * vira o token de ação sensível, consumido na hora) e a chave nasce. A
+     * resposta é a própria tela, com a secreta UMA vez.
      *
      * @throws ValidationException
      */
-    public function store(Request $request, ApiKeyService $apiKeys): Response
+    public function store(Request $request, ApiKeyService $apiKeys, ApiKeyCreationConfirmation $confirmation): Response
     {
         $this->authorizeManage(ApiKeyAttempt::Created);
         $validated = $this->validateKeyForm($request);
         $this->resolveProjects($request, ApiKeyAttempt::Created);
 
-        $this->consume($request);
+        $request->validate(
+            ['code' => ['required', 'string', 'size:6']],
+            [],
+            ['code' => __('panel.sensitive.code')],
+        );
+
+        $confirmation->confirm($this->user($request), $request->string('code')->toString())
+            ->consumeFor($this->user($request));
+
+        $expiresAt = ApiKeyExpiry::resolve(
+            $request->string('expiry_unit')->toString(),
+            $request->filled('expiry_amount') ? $request->integer('expiry_amount') : null,
+        );
 
         $result = $apiKeys->create($this->user($request), [
             'name' => $validated['name'],
             'scopes' => $request->boolean('all_scopes') ? null : array_values($validated['scopes'] ?? []),
-            'expires_at' => ($validated['expires_at'] ?? null) !== null
-                ? Carbon::parse($validated['expires_at'])->toDateTimeString()
-                : null,
+            'expires_at' => $expiresAt?->toIso8601String(),
             'project_uuids' => ($validated['project_uuids'] ?? []) !== [] ? array_values($validated['project_uuids']) : null,
         ]);
 
@@ -221,6 +257,8 @@ final class ApiKeysController implements HasMiddleware
                 ->values()->all(),
             'scopesCatalog' => (array) config('api_keys.scopes_catalog', []),
             'graceOptions' => self::GRACE_OPTIONS,
+            'expiryOptions' => ApiKeyExpiry::options(),
+            'creationRequiresTransactionPassword' => app(ApiKeyCreationConfirmation::class)->requiresTransactionPassword(),
             'canManageKeys' => Accounts::can(AccountAbility::ManageApiKeys),
         ]);
 
@@ -260,7 +298,8 @@ final class ApiKeysController implements HasMiddleware
     }
 
     /**
-     * MESMAS regras do StoreApiKeyRequest da API v1 (e da tela Livewire).
+     * MESMAS regras do StoreApiKeyRequest da API v1 (e da tela Livewire); a
+     * validade, porém, é a escolha da tela (ApiKeyExpiry), não uma data.
      *
      * @return array<string, mixed>
      *
@@ -270,7 +309,8 @@ final class ApiKeysController implements HasMiddleware
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:100'],
-            'expires_at' => ['nullable', 'date', 'after:now'],
+            // A validade escolhida: sem validade, N horas ou N dias.
+            ...ApiKeyExpiry::rules($request->input('expiry_unit')),
             // "Todas as permissões" é uma ESCOLHA explícita do formulário: sem
             // o campo (pedido vazio ou malformado), a chave não nasce com
             // `*:*` por omissão — o pedido é recusado.
@@ -283,7 +323,8 @@ final class ApiKeysController implements HasMiddleware
             'scopes.*.regex' => __('api_keys.scopes.invalid_format'),
         ], [
             'name' => __('panel.common.name'),
-            'expires_at' => __('panel.api_keys.expires_at'),
+            'expiry_unit' => __('panel.api_keys.expires_at'),
+            'expiry_amount' => __('panel.api_keys.expiry_amount'),
         ]);
 
         if (! $request->boolean('all_scopes') && ($validated['scopes'] ?? []) === []) {

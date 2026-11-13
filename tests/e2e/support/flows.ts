@@ -190,7 +190,15 @@ export async function setTransactionPassword(page: Page): Promise<void> {
 export async function confirmSensitive(page: Page, request: APIRequestContext, address: string, seen: Set<string>): Promise<void> {
     const dialog = page.locator('[data-sensitive-dialog]');
     await expect(dialog).toBeVisible();
-    await dialog.locator('#sensitive_transaction_password').fill(transactionPassword);
+
+    // A criação de chave no ambiente `test` (API_KEYS_ENVIRONMENT) pede só o
+    // código: o diálogo vem sem o campo da senha de transação.
+    const password = dialog.locator('#sensitive_transaction_password');
+
+    if ((await password.count()) > 0) {
+        await password.fill(transactionPassword);
+    }
+
     await dialog.locator('[data-sensitive-send]').click();
     await expect(dialog.locator('#sensitive_code')).toBeVisible();
 

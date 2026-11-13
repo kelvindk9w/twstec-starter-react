@@ -261,7 +261,7 @@ it('a secreta da chave só existe na resposta IMEDIATA da criação e da rotaç�
     ['empresa' => $empresa, 'dono' => $dono] = contaComEquipe();
     entrarNa($dono, $empresa);
 
-    $criacao = confirmarSensivel('/api-keys/code', 'post', '/api-keys', ['name' => 'Nova', 'all_scopes' => true])->assertOk();
+    $criacao = confirmarSensivel('/api-keys/code', 'post', '/api-keys', ['name' => 'Nova', 'all_scopes' => true, 'expiry_unit' => 'none'])->assertOk();
     $secreta = (string) $criacao->json('flash.revealedKey.secret');
     $chave = comoSistema(fn () => ApiKey::query()->sole());
 

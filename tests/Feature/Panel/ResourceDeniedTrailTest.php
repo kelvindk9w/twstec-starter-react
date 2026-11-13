@@ -31,7 +31,7 @@ beforeEach(function () {
  */
 function chaveDoFormulario(array $extra = []): array
 {
-    return ['name' => 'Integração', 'all_scopes' => true, 'scopes' => [], 'project_uuids' => [], 'expires_at' => null, ...$extra];
+    return ['name' => 'Integração', 'all_scopes' => true, 'scopes' => [], 'project_uuids' => [], 'expiry_unit' => 'none', ...$extra];
 }
 
 /**

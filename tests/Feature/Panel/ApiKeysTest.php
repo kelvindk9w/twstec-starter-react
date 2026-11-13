@@ -3,11 +3,19 @@
 declare(strict_types=1);
 
 use App\Models\User;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 use Inertia\Testing\AssertableInertia as Assert;
+use Twstec\Kit\Accounts\Accounts;
+use Twstec\Kit\Accounts\ApiKeys\Confirmation\ApiKeyCreationConfirmation;
 use Twstec\Kit\Accounts\ApiKeys\Enums\ApiKeyStatus;
 use Twstec\Kit\Accounts\ApiKeys\Models\ApiKey;
+use Twstec\Kit\Accounts\ApiKeys\Services\ApiKeyService;
 use Twstec\Kit\Accounts\ApiKeys\Support\ApiKeyHasher;
+use Twstec\Kit\Auth\Enums\VerificationPurpose;
+use Twstec\Kit\Auth\Mail\VerificationCodeMail;
+use Twstec\Kit\Auth\Models\SensitiveActionToken;
 
 // =============================================================================
 // Chaves de API pelo painel React: o caminho HTTP/Inertia do starter sobre o
@@ -16,6 +24,10 @@ use Twstec\Kit\Accounts\ApiKeys\Support\ApiKeyHasher;
 // confirmação sensível de verdade (senha → código do e-mail → token consumido
 // no servidor) e a SECRETA exibida UMA vez — só na resposta imediata, fora das
 // props, nunca na listagem, nunca na sessão.
+//
+// A CRIAÇÃO segue a confirmação do ambiente das chaves
+// (`api_keys.creation_confirmation`): em `live`, senha de transação + código;
+// em `test` (o do .env.example), só o código. Cada teste diz o ambiente.
 // =============================================================================
 
 beforeEach(function () {
@@ -29,7 +41,7 @@ beforeEach(function () {
  */
 function dadosDaChave(array $extra = []): array
 {
-    return ['name' => 'Integração do checkout', 'all_scopes' => true, 'scopes' => [], 'project_uuids' => [], 'expires_at' => null, ...$extra];
+    return ['name' => 'Integração do checkout', 'all_scopes' => true, 'scopes' => [], 'project_uuids' => [], 'expiry_unit' => 'none', ...$extra];
 }
 
 it('exige sessão e e-mail confirmado', function () {
@@ -84,7 +96,8 @@ it('member vê as chaves mas não gere: sem botões e 403 em cada envio', functi
     Mail::assertNothingQueued();
 })->group('accounts');
 
-it('cria pela tela com a confirmação sensível e mostra a secreta UMA vez — só na resposta imediata', function () {
+it('cria pela tela com a confirmação sensível (live) e mostra a secreta UMA vez — só na resposta imediata', function () {
+    config()->set('api_keys.environment', 'live');
     ['empresa' => $empresa, 'admin' => $admin] = contaComEquipe();
     entrarNa($admin, $empresa);
 
@@ -122,6 +135,7 @@ it('cria pela tela com a confirmação sensível e mostra a secreta UMA vez — 
 })->group('accounts');
 
 it('escopos granulares: com "todas" desligado, exige a seleção e grava só os marcados', function () {
+    config()->set('api_keys.environment', 'live');
     $dono = User::factory()->withTransactionPassword()->create();
     entrarNa($dono, contaPessoal($dono));
 
@@ -147,7 +161,8 @@ it('"todas as permissões" é escolha explícita: pedido sem o campo é recusado
     Mail::assertNothingQueued();
 })->group('accounts');
 
-it('sem senha de transação definida, a tela avisa e nada é enviado', function () {
+it('live: sem senha de transação definida, a tela avisa e nada é enviado', function () {
+    config()->set('api_keys.environment', 'live');
     $dono = User::factory()->create();
     entrarNa($dono, contaPessoal($dono));
 
@@ -157,12 +172,17 @@ it('sem senha de transação definida, a tela avisa e nada é enviado', function
     Mail::assertNothingQueued();
 })->group('accounts');
 
-it('senha de transação errada e código errado: nenhuma chave', function () {
+it('live: senha de transação errada (ou nenhuma) e código errado: nenhuma chave', function () {
+    config()->set('api_keys.environment', 'live');
     $dono = User::factory()->withTransactionPassword()->create();
     entrarNa($dono, contaPessoal($dono));
 
     $this->post('/api-keys/code', dadosDaChave(['stage' => 'send', 'transaction_password' => 'errada-123']))
         ->assertSessionHasErrors('transaction_password');
+    // Live nunca afrouxa: sem a senha, nenhum código sai.
+    $this->post('/api-keys/code', dadosDaChave(['stage' => 'send']))
+        ->assertSessionHasErrors('transaction_password');
+    Mail::assertNothingQueued();
 
     $this->post('/api-keys/code', dadosDaChave(['stage' => 'send', 'transaction_password' => SENHA_TRANSACAO]))->assertSessionHasNoErrors();
     $codigo = ultimoCodigo();
@@ -242,4 +262,149 @@ it('a tela é Inertia com o catálogo de escopos e as opções de transição', 
         ->where('graceOptions', [0, 60, 1440, 10080])
         ->has('scopesCatalog')
         ->has('keys', 0));
+})->group('accounts');
+
+// =============================================================================
+// CONFIRMAÇÃO DA CRIAÇÃO POR AMBIENTE e VALIDADE ESCOLHIDA NA CRIAÇÃO
+// =============================================================================
+
+it('a tela recebe a política da criação e a escolha da validade com os tetos', function (string $ambiente, bool $pedeSenha) {
+    config()->set('api_keys.environment', $ambiente);
+    config()->set('api_keys.expiry.max_hours', 48);
+    config()->set('api_keys.expiry.max_days', 90);
+    $dono = User::factory()->create();
+    entrarNa($dono, contaPessoal($dono));
+
+    $this->get('/api-keys')->assertInertia(fn (Assert $page) => $page
+        ->component('api-keys/index')
+        ->where('creationRequiresTransactionPassword', $pedeSenha)
+        ->where('expiryOptions', ['units' => ['none', 'hours', 'days'], 'maxHours' => 48, 'maxDays' => 90]));
+})->with([
+    'live' => ['live', true],
+    'test' => ['test', false],
+])->group('accounts');
+
+it('test: cria só com o código por e-mail — sem senha de transação, sem token de ação sensível', function () {
+    config()->set('api_keys.environment', 'test');
+    $dono = User::factory()->create(); // sem senha de transação: a criação não pede
+    entrarNa($dono, contaPessoal($dono));
+
+    $this->post('/api-keys/code', dadosDaChave(['stage' => 'check']))->assertSessionHasNoErrors();
+    Mail::assertNothingQueued();
+
+    $this->post('/api-keys/code', dadosDaChave(['stage' => 'send']))
+        ->assertRedirect('/api-keys')
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('status', __('auth.verification_code.sent'));
+
+    /** @var VerificationCodeMail $mail */
+    $mail = Mail::queued(VerificationCodeMail::class)->last();
+    expect($mail->purpose)->toBe(VerificationPurpose::CodeConfirmation);
+
+    $response = $this->withHeaders(inertiaHeaders())->post('/api-keys', dadosDaChave(['code' => ultimoCodigo()]))->assertOk();
+
+    $chave = comoSistema(fn () => ApiKey::query()->sole());
+
+    expect($response->json('flash.revealedKey.publicKey'))->toBe($chave->public_key)
+        ->and($chave->expires_at)->toBeNull()
+        ->and(SensitiveActionToken::query()->count())->toBe(0);
+
+    // O código é de uso único.
+    $this->post('/api-keys', dadosDaChave(['code' => ultimoCodigo()]))->assertSessionHasErrors('code');
+    expect(comoSistema(fn () => ApiKey::query()->count()))->toBe(1);
+})->group('accounts');
+
+it('test: código errado não cria; a rotação continua pedindo a senha de transação', function () {
+    config()->set('api_keys.environment', 'test');
+    $dono = User::factory()->withTransactionPassword()->create();
+    ['api_key' => $chave] = chaveNa(contaPessoal($dono), $dono);
+    entrarNa($dono, contaPessoal($dono));
+
+    $this->post('/api-keys/code', dadosDaChave(['stage' => 'send']))->assertSessionHasNoErrors();
+    $errado = ultimoCodigo() === '000000' ? '111111' : '000000';
+    $this->post('/api-keys', dadosDaChave(['code' => $errado]))->assertSessionHasErrors('code');
+
+    $this->post("/api-keys/{$chave->uuid}/rotate/code", ['grace_minutes' => 0, 'stage' => 'send'])
+        ->assertSessionHasErrors('transaction_password');
+
+    Mail::assertQueuedCount(1);
+    expect(comoSistema(fn () => ApiKey::query()->count()))->toBe(1);
+})->group('accounts');
+
+it('a validade escolhida na criação: sem validade, N horas ou N dias', function (array $validade, ?string $esperado) {
+    config()->set('api_keys.environment', 'test');
+    $this->travelTo(CarbonImmutable::parse('2026-11-14 10:00:00', 'UTC'));
+    $dono = User::factory()->create();
+    entrarNa($dono, contaPessoal($dono));
+
+    $dados = dadosDaChave($validade);
+
+    $this->post('/api-keys/code', [...$dados, 'stage' => 'send'])->assertSessionHasNoErrors();
+    $this->withHeaders(inertiaHeaders())->post('/api-keys', [...$dados, 'code' => ultimoCodigo()])->assertOk();
+
+    $chave = comoSistema(fn () => ApiKey::query()->sole());
+
+    expect($chave->expires_at?->utc()->toIso8601String())->toBe($esperado);
+})->with([
+    'sem validade' => [['expiry_unit' => 'none'], null],
+    '6 horas' => [['expiry_unit' => 'hours', 'expiry_amount' => 6], '2026-11-14T16:00:00+00:00'],
+    '30 dias' => [['expiry_unit' => 'days', 'expiry_amount' => '30'], '2026-12-14T10:00:00+00:00'],
+])->group('accounts');
+
+it('validade fora do teto, sem quantidade, desconhecida ou a data antiga: recusada antes de gastar o código', function (array $validade, string $campo) {
+    config()->set('api_keys.environment', 'test');
+    config()->set('api_keys.expiry.max_hours', 48);
+    config()->set('api_keys.expiry.max_days', 90);
+    $dono = User::factory()->create();
+    entrarNa($dono, contaPessoal($dono));
+
+    $semValidade = dadosDaChave();
+    unset($semValidade['expiry_unit']);
+
+    $this->post('/api-keys/code', [...$semValidade, ...$validade, 'stage' => 'send'])->assertSessionHasErrors($campo);
+    Mail::assertNothingQueued();
+
+    // Pedido válido manda o código; a criação com a validade errada é recusada
+    // e o código continua valendo para a certa.
+    $this->post('/api-keys/code', dadosDaChave(['stage' => 'send']))->assertSessionHasNoErrors();
+    $codigo = ultimoCodigo();
+    $this->post('/api-keys', [...$semValidade, ...$validade, 'code' => $codigo])->assertSessionHasErrors($campo);
+    expect(comoSistema(fn () => ApiKey::query()->count()))->toBe(0);
+
+    $this->withHeaders(inertiaHeaders())->post('/api-keys', dadosDaChave(['code' => $codigo]))->assertOk();
+    expect(comoSistema(fn () => ApiKey::query()->count()))->toBe(1);
+})->with([
+    '49 horas' => [['expiry_unit' => 'hours', 'expiry_amount' => 49], 'expiry_amount'],
+    '91 dias' => [['expiry_unit' => 'days', 'expiry_amount' => 91], 'expiry_amount'],
+    'horas sem quantidade' => [['expiry_unit' => 'hours'], 'expiry_amount'],
+    'unidade desconhecida' => [['expiry_unit' => 'weeks', 'expiry_amount' => 1], 'expiry_unit'],
+    'só a data antiga' => [['expires_at' => '2030-01-01 00:00:00'], 'expiry_unit'],
+])->group('accounts');
+
+it('a chave de SESSÃO não aparece na lista do painel', function () {
+    config()->set('api_keys.environment', 'test');
+    $dono = User::factory()->create();
+    $conta = contaPessoal($dono);
+    chaveNa($conta, $dono, ['name' => 'Chave comum']);
+
+    // A chave de sessão nasce pela API do pacote (como a "Experimente" de
+    // uma documentação), na sessão de verdade da pessoa.
+    $session = app('session.store');
+    $session->start();
+    Auth::guard('web')->login($dono);
+
+    $confirmation = app(ApiKeyCreationConfirmation::class);
+    $confirmation->sendCode($dono);
+    $prova = $confirmation->confirm($dono, ultimoCodigo());
+
+    ['api_key' => $daSessao] = Accounts::actingAs($conta, fn (): array => app(ApiKeyService::class)
+        ->createForSession($dono, $session, ['name' => 'Chave da sessão'], $prova), $dono);
+
+    entrarNa($dono, $conta);
+
+    $response = $this->withHeaders(inertiaHeaders())->get('/api-keys')->assertOk()
+        ->assertJsonCount(1, 'props.keys')
+        ->assertJsonPath('props.keys.0.name', 'Chave comum');
+
+    expect((string) $response->getContent())->not->toContain($daSessao->public_key);
 })->group('accounts');
